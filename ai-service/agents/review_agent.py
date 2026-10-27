@@ -1,18 +1,22 @@
-# TODO: Implement Code Review Agent in Prompt 2
-# Reviews code for:
-# 1. Correctness
-# 2. Code Quality / Style
-# 3. Performance
-# 4. Security Concerns
+from services.llm_service import llm_service
 
 def process_review(state: dict) -> dict:
     """
-    Code Review Agent [TODO in Prompt 2].
-    Analyzes submitted code and test results.
+    Code Review Agent.
+    Analyzes submitted code and test results covering Correctness, Code Quality, Performance, and Security.
     """
-    state["response"] = "[Not implemented yet] Code review agent will process submission in Prompt 2."
-    state["review_result"] = {
-        "status": "TODO",
-        "message": "Code review agent implementation pending Prompt 2."
-    }
+    problem_title = state.get("problem_title", "")
+    problem_description = state.get("problem_description", "")
+    code = state.get("code", "")
+    test_results = state.get("test_results", [])
+
+    review_result = llm_service.generate_code_review(
+        problem_title=problem_title,
+        problem_description=problem_description,
+        code=code,
+        test_results=test_results
+    )
+
+    state["review_result"] = review_result
+    state["response"] = review_result.get("summary", "Code review completed.")
     return state

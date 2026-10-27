@@ -8,10 +8,11 @@ from typing import Optional, List, Dict, Any
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from agents.hint_agent import process_hint
+from agents.review_agent import process_review
 
 app = FastAPI(
     title="CodeMentorAI - AI Service",
-    description="Python FastAPI Adaptive Hint Agent Service",
+    description="Python FastAPI Code Review & Hint Agent Service",
     version="1.0.0"
 )
 
@@ -23,6 +24,13 @@ class HintRequestPayload(BaseModel):
     code: Optional[str] = ""
     testResults: Optional[List[Any]] = []
     hintLevel: int = 1
+
+class ReviewRequestPayload(BaseModel):
+    problemId: Optional[str] = None
+    problemTitle: Optional[str] = ""
+    problemDescription: Optional[str] = ""
+    code: Optional[str] = ""
+    testResults: Optional[List[Any]] = []
 
 class ProcessRequest(BaseModel):
     user_id: str = "default_user"
@@ -46,9 +54,6 @@ def health_check():
 
 @app.post("/api/hint")
 def generate_adaptive_hint(payload: HintRequestPayload):
-    """
-    Adaptive Hint Agent Endpoint for Prompt 4.
-    """
     try:
         level = payload.hintLevel
         if level < 1:
@@ -85,25 +90,54 @@ def generate_adaptive_hint(payload: HintRequestPayload):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/supervisor/process")
-def process_agent_request(payload: ProcessRequest):
+@app.post("/api/review")
+def generate_code_review(payload: ReviewRequestPayload):
     """
-    Supervisor endpoint wrapper.
+    Code Review Agent Endpoint for Prompt 5.
     """
     try:
-        data = payload.model_dump()
         state = {
-            "problem_id": data.get("problem_id"),
-            "code": data.get("code"),
-            "hint_level": data.get("hint_level", 1),
-            "hint": ""
+            "problem_id": payload.problemId,
+            "problem_title": payload.problemTitle,
+            "problem_description": payload.problemDescription,
+            "code": payload.code,
+            "test_results": payload.testResults,
+            "review_result": {}
         }
-        result = process_hint(state)
+
+        result_state = process_review(state)
+
         return {
             "success": True,
-            "state": result,
-            "response": result.get("hint", "")
+            "review": result_state.get("review_result", {})
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/supervisor/process")
+def process_agent_request(payload: ProcessRequest):
+    try:
+        data = payload.model_dump()
+        if data.get("request_type") == "review":
+            state = {
+                "problem_id": data.get("problem_id"),
+                "problem_title": "",
+                "problem_description": "",
+                "code": data.get("code"),
+                "test_results": [],
+                "review_result": {}
+            }
+            result = process_review(state)
+            return {"success": True, "state": result, "response": result.get("review_result", {})}
+        else:
+            state = {
+                "problem_id": data.get("problem_id"),
+                "code": data.get("code"),
+                "hint_level": data.get("hint_level", 1),
+                "hint": ""
+            }
+            result = process_hint(state)
+            return {"success": True, "state": result, "response": result.get("hint", "")}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

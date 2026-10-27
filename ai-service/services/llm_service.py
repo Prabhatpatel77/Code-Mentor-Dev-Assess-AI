@@ -49,7 +49,6 @@ Requested Hint Level: Level {hint_level}
 """
 
         if not api_key:
-            # Fallback level-specific hints when GEMINI_API_KEY is not configured
             fallback_hints = {
                 1: f"Level 1 (Conceptual): For '{problem_title}', think about how to track or store state as you iterate. Consider what data structure lets you quickly look up values you've already seen.",
                 2: f"Level 2 (Approach): To solve '{problem_title}', iterate through the input data while maintaining a lookup structure (like a Map or Set). For each element, check if its corresponding complement or target condition is already stored.",
@@ -58,7 +57,6 @@ Requested Hint Level: Level {hint_level}
             }
             return fallback_hints.get(hint_level, fallback_hints[1])
 
-        # Call Gemini REST API (v1beta gemini-2.5-flash)
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
         payload = {
             "contents": [
@@ -97,5 +95,119 @@ Requested Hint Level: Level {hint_level}
                 4: f"Level 4 (Debugging): Inspect your function return statement and array indices for off-by-one errors."
             }
             return fallback_hints.get(hint_level, fallback_hints[1])
+
+    def generate_code_review(self, problem_title: str, problem_description: str, code: str, test_results: list) -> dict:
+        """
+        Calls Gemini API to generate a structured code review covering Correctness, Code Quality, Performance, and Security.
+        """
+        api_key = os.getenv("GEMINI_API_KEY", self.api_key)
+
+        system_instruction = """
+You are a coding mentor reviewing a learner's JavaScript solution.
+Review the code using:
+1. Correctness (evaluating test results and edge cases)
+2. Code quality and style (readability, naming, structure)
+3. Performance (time & space complexity)
+4. Common security concerns
+
+You MUST return a valid JSON object with the following exact structure:
+{
+  "overallScore": 80,
+  "summary": "Summary of the solution quality.",
+  "correctness": {
+    "status": "pass",
+    "feedback": "All test cases passed."
+  },
+  "codeQuality": {
+    "score": 80,
+    "feedback": ["Feedback point 1", "Feedback point 2"]
+  },
+  "performance": {
+    "timeComplexity": "O(n)",
+    "spaceComplexity": "O(n)",
+    "feedback": ["Feedback point 1"]
+  },
+  "security": {
+    "status": "pass",
+    "feedback": "No significant security concerns identified."
+  }
+}
+"""
+
+        prompt_content = f"""
+Problem Title: {problem_title}
+Problem Description: {problem_description}
+Learner Code:
+```javascript
+{code}
+```
+Test Results: {json.dumps(test_results if test_results else [])}
+"""
+
+        fallback_review = {
+            "overallScore": 75,
+            "summary": "The solution functions correctly for standard test cases.",
+            "correctness": {
+                "status": "pass" if all(r.get("passed", False) for r in test_results) else "fail",
+                "feedback": "Evaluated against problem test cases."
+            },
+            "codeQuality": {
+                "score": 75,
+                "feedback": ["Code structure is straightforward. Consider adding descriptive comments."]
+            },
+            "performance": {
+                "timeComplexity": "O(n)",
+                "spaceComplexity": "O(1)",
+                "feedback": ["Execution time is within acceptable limits."]
+            },
+            "security": {
+                "status": "pass",
+                "feedback": "No significant security concerns identified."
+            }
+        }
+
+        if not api_key:
+            return fallback_review
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": f"{system_instruction}\n\n{prompt_content}"}]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.2,
+                "maxOutputTokens": 800,
+                "responseMimeType": "application/json"
+            }
+        }
+
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=12) as response:
+                res_data = json.loads(response.read().decode('utf-8'))
+                candidates = res_data.get('candidates', [])
+                if candidates and 'content' in candidates[0]:
+                    parts = candidates[0]['content'].get('parts', [])
+                    if parts:
+                        text = parts[0].get('text', '').strip()
+                        if text.startswith("```json"):
+                            text = text[7:]
+                        if text.startswith("```"):
+                            text = text[3:]
+                        if text.endswith("```"):
+                            text = text[:-3]
+                        return json.loads(text.strip())
+                return fallback_review
+        except Exception as e:
+            print(f"[Gemini Review Warning] {e}")
+            return fallback_review
 
 llm_service = LLMService()

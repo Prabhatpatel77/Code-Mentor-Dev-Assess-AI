@@ -3,10 +3,12 @@ import { useParams, Link } from 'react-router-dom';
 import { getProblemById } from '../../services/problemService';
 import { runCode, submitSolution } from '../../services/submissionService';
 import { getAdaptiveHint } from '../../services/hintService';
+import { getCodeReview } from '../../services/reviewService';
 import CodeEditor from '../../components/CodeEditor/CodeEditor';
 import TestResults from '../../components/TestResults/TestResults';
 import HintSection from '../../components/HintSection/HintSection';
 import HintHistory from '../../components/HintHistory/HintHistory';
+import CodeReview from '../../components/CodeReview/CodeReview';
 import { ArrowLeft, Play, Send, Tag, AlertCircle } from 'lucide-react';
 import './ProblemDetail.css';
 
@@ -29,6 +31,11 @@ export default function ProblemDetail() {
   const [hintError, setHintError] = useState(null);
   const [hintHistory, setHintHistory] = useState([]);
   const [nextHintLevel, setNextHintLevel] = useState(1);
+
+  // Code Review state
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState(null);
+  const [codeReview, setCodeReview] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -112,6 +119,29 @@ export default function ProblemDetail() {
       setHintError(err.response?.data?.message || 'Failed to request AI hint. Please check your connection.');
     } finally {
       setHintLoading(false);
+    }
+  };
+
+  const handleRequestReview = async () => {
+    if (!code.trim()) {
+      setReviewError('Please write some code before requesting a review.');
+      return;
+    }
+    setReviewLoading(true);
+    setReviewError(null);
+
+    try {
+      const res = await getCodeReview(problem._id, code);
+      if (res && res.success) {
+        setCodeReview(res.review);
+      } else {
+        setReviewError('Unable to generate code review.');
+      }
+    } catch (err) {
+      console.error('Code review error:', err);
+      setReviewError(err.response?.data?.message || 'Unable to generate the code review right now. Please try again.');
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -226,7 +256,7 @@ export default function ProblemDetail() {
           <HintHistory hints={hintHistory} />
         </div>
 
-        {/* Right Column: Code Editor & Execution Results */}
+        {/* Right Column: Code Editor, Test Results, & Code Review Agent */}
         <div className="problem-right-panel">
           <CodeEditor
             code={code}
@@ -238,6 +268,13 @@ export default function ProblemDetail() {
             loading={executing}
             error={executionError}
             result={testResult}
+          />
+
+          <CodeReview
+            onReviewRequest={handleRequestReview}
+            loading={reviewLoading}
+            error={reviewError}
+            review={codeReview}
           />
         </div>
 

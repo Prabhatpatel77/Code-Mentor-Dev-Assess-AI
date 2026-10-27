@@ -1,0 +1,56 @@
+/* src/components/ReviewCategory/ReviewCategory.css */
+.review-category-card {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.6rem;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.review-category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.review-category-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.icon-pass { color: var(--accent-emerald); }
+.icon-warn { color: var(--accent-amber); }
+
+.review-category-score {
+  font-family: monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-indigo);
+}
+
+.complexity-row {
+  display: flex;
+  gap: 1rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.35rem;
+}
+
+.review-category-body {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.review-category-body ul {
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
