@@ -1,8 +1,8 @@
 import os
 import sys
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+import json
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 
 # Ensure local imports work cleanly
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -12,185 +12,165 @@ from agents.hint_agent import process_hint
 from agents.review_agent import process_review
 from agents.coach_agent import process_coaching
 
-app = FastAPI(
-    title="CodeMentorAI - AI Service",
-    description="Python FastAPI LangGraph Supervisor and Agents Service",
-    version="1.0.0"
-)
+PORT = int(os.getenv("AI_SERVICE_PORT", os.getenv("PORT", "8001")))
 
-class HintRequestPayload(BaseModel):
-    problemId: Optional[str] = None
-    problemTitle: Optional[str] = ""
-    problemDescription: Optional[str] = ""
-    examples: Optional[List[Any]] = []
-    code: Optional[str] = ""
-    testResults: Optional[List[Any]] = []
-    hintLevel: int = 1
+class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
+    pass
 
-class ReviewRequestPayload(BaseModel):
-    problemId: Optional[str] = None
-    problemTitle: Optional[str] = ""
-    problemDescription: Optional[str] = ""
-    code: Optional[str] = ""
-    testResults: Optional[List[Any]] = []
+class AIRequestHandler(BaseHTTPRequestHandler):
+    def _set_headers(self, status=200, content_type="application/json"):
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.end_headers()
 
-class CoachRequestPayload(BaseModel):
-    progress: Optional[Dict[str, Any]] = {}
-    recommendation: Optional[Dict[str, Any]] = {}
+    def do_OPTIONS(self):
+        self._set_headers(200)
 
-class AgentRequestPayload(BaseModel):
-    request_type: str
-    user_id: Optional[str] = "default_user"
-    problem_id: Optional[str] = None
-    problem_title: Optional[str] = ""
-    problem_description: Optional[str] = ""
-    examples: Optional[List[Any]] = []
-    code: Optional[str] = ""
-    hint_level: Optional[int] = 1
-    hints_used: Optional[int] = 0
-    test_results: Optional[List[Any]] = []
-    review_result: Optional[Dict[str, Any]] = None
-    learner_progress: Optional[Dict[str, Any]] = None
-    recommendation: Optional[Dict[str, Any]] = None
-
-@app.get("/")
-@app.get("/health")
-def health_check():
-    return {
-        "status": "healthy",
-        "service": "CodeMentorAI-Python-AIService",
-        "version": "1.0.0",
-        "langgraph_initialized": True,
-        "gemini_api_configured": bool(os.getenv("GEMINI_API_KEY"))
-    }
-
-@app.post("/api/hint")
-def generate_adaptive_hint(payload: HintRequestPayload):
-    try:
-        level = payload.hintLevel
-        if level < 1:
-            level = 1
-        elif level > 4:
-            level = 4
-
-        state = {
-            "problem_id": payload.problemId,
-            "problem_title": payload.problemTitle,
-            "problem_description": payload.problemDescription,
-            "examples": payload.examples,
-            "code": payload.code,
-            "test_results": payload.testResults,
-            "hint_level": level,
-            "hint": ""
-        }
-
-        result_state = process_hint(state)
-
-        hint_types = {
-            1: "conceptual",
-            2: "approach",
-            3: "code_structure",
-            4: "debugging"
-        }
-
-        response_data = {
-            "success": True,
-            "hintLevel": result_state.get("hint_level", level),
-            "hintType": hint_types.get(result_state.get("hint_level", level), "conceptual"),
-            "hint": result_state.get("hint", "")
-        }
-
-        if "learning_signal" in result_state:
-            response_data["learning_signal"] = result_state["learning_signal"]
-
-        return response_data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/review")
-def generate_code_review(payload: ReviewRequestPayload):
-    try:
-        state = {
-            "problem_id": payload.problemId,
-            "problem_title": payload.problemTitle,
-            "problem_description": payload.problemDescription,
-            "code": payload.code,
-            "test_results": payload.testResults,
-            "review_result": {}
-        }
-
-        result_state = process_review(state)
-
-        return {
-            "success": True,
-            "review": result_state.get("review_result", {})
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/coach/explain")
-def generate_coach_explanation(payload: CoachRequestPayload):
-    try:
-        state = {
-            "progress": payload.progress or {},
-            "recommendation": payload.recommendation or {},
-            "explanation": ""
-        }
-
-        result_state = process_coaching(state)
-
-        return {
-            "success": True,
-            "explanation": result_state.get("explanation", "")
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/agent")
-def unified_agent_endpoint(payload: AgentRequestPayload):
-    """
-    Unified LangGraph Supervisor Orchestration Endpoint for Prompt 7.
-    Routes deterministic requests ('hint', 'review', 'coach') through StateGraph.
-    """
-    req_type = (payload.request_type or "").strip().lower()
-
-    if req_type not in ("hint", "review", "coach"):
-        return {
-            "success": False,
-            "message": "Unsupported request type",
-            "supported_types": ["hint", "review", "coach"]
-        }
-
-    try:
-        state = payload.model_dump()
-        state["request_type"] = req_type
-        result_state = run_agent_workflow(state)
-
-        if result_state.get("error"):
-            return {
-                "success": False,
-                "message": result_state.get("error"),
-                "state": result_state
+    def do_GET(self):
+        path = self.path.split("?")[0]
+        if path in ("/", "/health"):
+            data = {
+                "status": "healthy",
+                "service": "CodeMentorAI-Python-AIService",
+                "version": "1.0.0",
+                "langgraph_initialized": True,
+                "gemini_api_configured": bool(os.getenv("GEMINI_API_KEY"))
             }
+            self._set_headers(200)
+            self.wfile.write(json.dumps(data).encode("utf-8"))
+        else:
+            self._set_headers(404)
+            self.wfile.write(json.dumps({"error": "Endpoint not found"}).encode("utf-8"))
 
-        return {
-            "success": True,
-            "request_type": req_type,
-            "response": result_state.get("response", ""),
-            "state": result_state
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Orchestrator error: {str(e)}"
-        }
+    def do_POST(self):
+        path = self.path.split("?")[0]
+        content_length = int(self.headers.get("Content-Length", 0))
+        post_data = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else "{}"
 
-@app.post("/api/supervisor/process")
-def process_agent_request(payload: AgentRequestPayload):
-    """Legacy supervisor compatibility endpoint"""
-    return unified_agent_endpoint(payload)
+        try:
+            payload = json.loads(post_data) if post_data else {}
+        except Exception:
+            payload = {}
+
+        try:
+            if path == "/api/hint":
+                level = payload.get("hintLevel", 1)
+                if level < 1:
+                    level = 1
+                elif level > 4:
+                    level = 4
+
+                state = {
+                    "problem_id": payload.get("problemId"),
+                    "problem_title": payload.get("problemTitle", ""),
+                    "problem_description": payload.get("problemDescription", ""),
+                    "examples": payload.get("examples", []),
+                    "code": payload.get("code", ""),
+                    "test_results": payload.get("testResults", []),
+                    "hint_level": level,
+                    "hint": ""
+                }
+                result_state = process_hint(state)
+                hint_types = {
+                    1: "conceptual",
+                    2: "approach",
+                    3: "code_structure",
+                    4: "debugging"
+                }
+                res = {
+                    "success": True,
+                    "hintLevel": result_state.get("hint_level", level),
+                    "hintType": hint_types.get(result_state.get("hint_level", level), "conceptual"),
+                    "hint": result_state.get("hint", "")
+                }
+                if "learning_signal" in result_state:
+                    res["learning_signal"] = result_state["learning_signal"]
+
+                self._set_headers(200)
+                self.wfile.write(json.dumps(res).encode("utf-8"))
+
+            elif path == "/api/review":
+                state = {
+                    "problem_id": payload.get("problemId"),
+                    "problem_title": payload.get("problemTitle", ""),
+                    "problem_description": payload.get("problemDescription", ""),
+                    "code": payload.get("code", ""),
+                    "test_results": payload.get("testResults", []),
+                    "review_result": {}
+                }
+                result_state = process_review(state)
+                res = {
+                    "success": True,
+                    "review": result_state.get("review_result", {})
+                }
+                self._set_headers(200)
+                self.wfile.write(json.dumps(res).encode("utf-8"))
+
+            elif path == "/api/coach/explain":
+                state = {
+                    "progress": payload.get("progress") or {},
+                    "recommendation": payload.get("recommendation") or {},
+                    "explanation": ""
+                }
+                result_state = process_coaching(state)
+                res = {
+                    "success": True,
+                    "explanation": result_state.get("explanation", "")
+                }
+                self._set_headers(200)
+                self.wfile.write(json.dumps(res).encode("utf-8"))
+
+            elif path in ("/api/agent", "/api/supervisor/process"):
+                req_type = (payload.get("request_type") or "").strip().lower()
+                if req_type not in ("hint", "review", "coach"):
+                    self._set_headers(400)
+                    self.wfile.write(json.dumps({
+                        "success": False,
+                        "message": "Unsupported request type",
+                        "supported_types": ["hint", "review", "coach"]
+                    }).encode("utf-8"))
+                    return
+
+                payload["request_type"] = req_type
+                result_state = run_agent_workflow(payload)
+
+                if result_state.get("error"):
+                    self._set_headers(400)
+                    self.wfile.write(json.dumps({
+                        "success": False,
+                        "message": result_state.get("error"),
+                        "state": result_state
+                    }).encode("utf-8"))
+                    return
+
+                res = {
+                    "success": True,
+                    "request_type": req_type,
+                    "response": result_state.get("response", ""),
+                    "state": result_state
+                }
+                self._set_headers(200)
+                self.wfile.write(json.dumps(res).encode("utf-8"))
+
+            else:
+                self._set_headers(404)
+                self.wfile.write(json.dumps({"error": "Endpoint not found"}).encode("utf-8"))
+
+        except Exception as e:
+            self._set_headers(500)
+            self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode("utf-8"))
+
+    def log_message(self, format, *args):
+        # Quiet standard HTTP logging
+        pass
+
+def run_server(port=PORT):
+    server = ThreadingSimpleServer(("0.0.0.0", port), AIRequestHandler)
+    print(f"[CodeMentorAI-Python] Python AI Service running at http://0.0.0.0:{port}")
+    server.serve_forever()
 
 if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv("PORT", "8000"))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    run_server()

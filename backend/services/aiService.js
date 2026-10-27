@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_SERVICE_URL = (process.env.AI_SERVICE_URL && process.env.AI_SERVICE_URL !== 'http://localhost:8000') 
+  ? process.env.AI_SERVICE_URL 
+  : 'http://localhost:5000';
 
 /**
  * Checks connectivity to the Python FastAPI AI Service

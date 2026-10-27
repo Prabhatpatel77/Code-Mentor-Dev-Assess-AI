@@ -5,7 +5,9 @@ import { SEED_PROBLEMS } from '../seed/seedProblems.js';
 import { executeJavaScript } from '../services/codeExecutor.js';
 import { calculateProgress, calculateRecommendation } from '../services/coachService.js';
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_SERVICE_URL = (process.env.AI_SERVICE_URL && process.env.AI_SERVICE_URL !== 'http://localhost:8000') 
+  ? process.env.AI_SERVICE_URL 
+  : 'http://localhost:5000';
 
 const VALID_REQUEST_TYPES = ['hint', 'review', 'coach'];
 

@@ -60,8 +60,10 @@ export const runCode = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
+      status: executionResult.status,
       passed: executionResult.passed,
       total: executionResult.total,
+      executionTimeMs: executionResult.executionTimeMs,
       results: executionResult.results
     });
   } catch (error) {

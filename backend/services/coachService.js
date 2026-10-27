@@ -7,7 +7,9 @@ import { SEED_PROBLEMS } from '../seed/seedProblems.js';
 import { getMemorySubmissions } from '../controllers/submissionController.js';
 import { getMemoryHintUsages } from '../controllers/aiController.js';
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_SERVICE_URL = (process.env.AI_SERVICE_URL && process.env.AI_SERVICE_URL !== 'http://localhost:8000') 
+  ? process.env.AI_SERVICE_URL 
+  : 'http://localhost:5000';
 
 /**
  * Normalizes problem ID for matching across string IDs and MongoDB ObjectIds
