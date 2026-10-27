@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getProblemById } from '../../services/problemService';
 import { runCode, submitSolution } from '../../services/submissionService';
+import { getAdaptiveHint } from '../../services/hintService';
 import CodeEditor from '../../components/CodeEditor/CodeEditor';
 import TestResults from '../../components/TestResults/TestResults';
+import HintSection from '../../components/HintSection/HintSection';
+import HintHistory from '../../components/HintHistory/HintHistory';
 import { ArrowLeft, Play, Send, Tag, AlertCircle } from 'lucide-react';
 import './ProblemDetail.css';
 
@@ -20,6 +23,12 @@ export default function ProblemDetail() {
   const [executing, setExecuting] = useState(false);
   const [executionError, setExecutionError] = useState(null);
   const [testResult, setTestResult] = useState(null);
+
+  // Adaptive Hint state
+  const [hintLoading, setHintLoading] = useState(false);
+  const [hintError, setHintError] = useState(null);
+  const [hintHistory, setHintHistory] = useState([]);
+  const [nextHintLevel, setNextHintLevel] = useState(1);
 
   useEffect(() => {
     async function load() {
@@ -74,6 +83,35 @@ export default function ProblemDetail() {
       setExecutionError(err.response?.data?.message || 'Unable to submit the solution. Please try again.');
     } finally {
       setExecuting(false);
+    }
+  };
+
+  const handleRequestHint = async () => {
+    if (nextHintLevel > 4) return;
+    setHintLoading(true);
+    setHintError(null);
+
+    try {
+      const activeTestResults = testResult ? testResult.results : [];
+      const res = await getAdaptiveHint(problem._id, code, activeTestResults);
+
+      if (res && res.success) {
+        const receivedLevel = res.hintLevel || nextHintLevel;
+        const newHintObj = {
+          level: receivedLevel,
+          hint: res.hint
+        };
+
+        setHintHistory((prev) => [...prev, newHintObj]);
+        setNextHintLevel(Math.min(receivedLevel + 1, 5));
+      } else {
+        setHintError('Could not retrieve hint. Please try again.');
+      }
+    } catch (err) {
+      console.error('Adaptive Hint error:', err);
+      setHintError(err.response?.data?.message || 'Failed to request AI hint. Please check your connection.');
+    } finally {
+      setHintLoading(false);
     }
   };
 
@@ -145,7 +183,7 @@ export default function ProblemDetail() {
       {/* Main Split Layout */}
       <div className="problem-workspace-grid">
         
-        {/* Left Column: Problem Statement & Examples */}
+        {/* Left Column: Problem Statement, Examples, & Adaptive Hint Agent */}
         <div className="problem-left-panel">
           <div className="card">
             <h2 className="text-xs font-mono text-muted" style={{ fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.75rem' }}>
@@ -176,6 +214,16 @@ export default function ProblemDetail() {
               </div>
             </div>
           )}
+
+          {/* Adaptive Hint Agent UI */}
+          <HintSection
+            onRequestHint={handleRequestHint}
+            loading={hintLoading}
+            error={hintError}
+            currentNextLevel={nextHintLevel}
+          />
+
+          <HintHistory hints={hintHistory} />
         </div>
 
         {/* Right Column: Code Editor & Execution Results */}

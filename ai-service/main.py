@@ -2,24 +2,33 @@ import os
 import sys
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional, List, Dict, Any
 
 # Ensure local imports work cleanly
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from graph.workflow import run_agent_workflow
+from agents.hint_agent import process_hint
 
 app = FastAPI(
     title="CodeMentorAI - AI Service",
-    description="Python FastAPI Service running LangGraph Supervisor and Agents",
+    description="Python FastAPI Adaptive Hint Agent Service",
     version="1.0.0"
 )
+
+class HintRequestPayload(BaseModel):
+    problemId: Optional[str] = None
+    problemTitle: Optional[str] = ""
+    problemDescription: Optional[str] = ""
+    examples: Optional[List[Any]] = []
+    code: Optional[str] = ""
+    testResults: Optional[List[Any]] = []
+    hintLevel: int = 1
 
 class ProcessRequest(BaseModel):
     user_id: str = "default_user"
     problem_id: Optional[str] = None
     code: Optional[str] = None
-    request_type: str  # 'hint', 'review', 'coach'
+    request_type: str = "hint"
     hint_level: int = 1
     hints_used: int = 0
     review_result: Optional[Dict[str, Any]] = None
@@ -28,29 +37,72 @@ class ProcessRequest(BaseModel):
 @app.get("/")
 @app.get("/health")
 def health_check():
-    """
-    Health check endpoint for Python AI Service.
-    """
     return {
         "status": "healthy",
         "service": "CodeMentorAI-Python-AIService",
         "version": "1.0.0",
-        "langgraph_initialized": True,
-        "environment": os.getenv("PYTHON_ENV", "development")
+        "gemini_api_configured": bool(os.getenv("GEMINI_API_KEY"))
     }
+
+@app.post("/api/hint")
+def generate_adaptive_hint(payload: HintRequestPayload):
+    """
+    Adaptive Hint Agent Endpoint for Prompt 4.
+    """
+    try:
+        level = payload.hintLevel
+        if level < 1:
+            level = 1
+        elif level > 4:
+            level = 4
+
+        state = {
+            "problem_id": payload.problemId,
+            "problem_title": payload.problemTitle,
+            "problem_description": payload.problemDescription,
+            "examples": payload.examples,
+            "code": payload.code,
+            "test_results": payload.testResults,
+            "hint_level": level,
+            "hint": ""
+        }
+
+        result_state = process_hint(state)
+
+        hint_types = {
+            1: "conceptual",
+            2: "approach",
+            3: "code_structure",
+            4: "debugging"
+        }
+
+        return {
+            "success": True,
+            "hintLevel": result_state.get("hint_level", level),
+            "hintType": hint_types.get(result_state.get("hint_level", level), "conceptual"),
+            "hint": result_state.get("hint", "")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/supervisor/process")
 def process_agent_request(payload: ProcessRequest):
     """
-    Supervisor endpoint that routes requests to AI agents (Hint, Review, Coach).
+    Supervisor endpoint wrapper.
     """
     try:
-        initial_state = payload.model_dump()
-        result_state = run_agent_workflow(initial_state)
+        data = payload.model_dump()
+        state = {
+            "problem_id": data.get("problem_id"),
+            "code": data.get("code"),
+            "hint_level": data.get("hint_level", 1),
+            "hint": ""
+        }
+        result = process_hint(state)
         return {
             "success": True,
-            "state": result_state,
-            "response": result_state.get("response", "[Not implemented yet] Response pending agent workflow.")
+            "state": result,
+            "response": result.get("hint", "")
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
