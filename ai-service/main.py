@@ -7,13 +7,14 @@ from typing import Optional, List, Dict, Any
 # Ensure local imports work cleanly
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+from graph.workflow import run_agent_workflow
 from agents.hint_agent import process_hint
 from agents.review_agent import process_review
 from agents.coach_agent import process_coaching
 
 app = FastAPI(
     title="CodeMentorAI - AI Service",
-    description="Python FastAPI Code Review, Hint, and Learning Coach Agent Service",
+    description="Python FastAPI LangGraph Supervisor and Agents Service",
     version="1.0.0"
 )
 
@@ -37,15 +38,20 @@ class CoachRequestPayload(BaseModel):
     progress: Optional[Dict[str, Any]] = {}
     recommendation: Optional[Dict[str, Any]] = {}
 
-class ProcessRequest(BaseModel):
-    user_id: str = "default_user"
+class AgentRequestPayload(BaseModel):
+    request_type: str
+    user_id: Optional[str] = "default_user"
     problem_id: Optional[str] = None
-    code: Optional[str] = None
-    request_type: str = "hint"
-    hint_level: int = 1
-    hints_used: int = 0
+    problem_title: Optional[str] = ""
+    problem_description: Optional[str] = ""
+    examples: Optional[List[Any]] = []
+    code: Optional[str] = ""
+    hint_level: Optional[int] = 1
+    hints_used: Optional[int] = 0
+    test_results: Optional[List[Any]] = []
     review_result: Optional[Dict[str, Any]] = None
     learner_progress: Optional[Dict[str, Any]] = None
+    recommendation: Optional[Dict[str, Any]] = None
 
 @app.get("/")
 @app.get("/health")
@@ -54,6 +60,7 @@ def health_check():
         "status": "healthy",
         "service": "CodeMentorAI-Python-AIService",
         "version": "1.0.0",
+        "langgraph_initialized": True,
         "gemini_api_configured": bool(os.getenv("GEMINI_API_KEY"))
     }
 
@@ -86,12 +93,17 @@ def generate_adaptive_hint(payload: HintRequestPayload):
             4: "debugging"
         }
 
-        return {
+        response_data = {
             "success": True,
             "hintLevel": result_state.get("hint_level", level),
             "hintType": hint_types.get(result_state.get("hint_level", level), "conceptual"),
             "hint": result_state.get("hint", "")
         }
+
+        if "learning_signal" in result_state:
+            response_data["learning_signal"] = result_state["learning_signal"]
+
+        return response_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -118,9 +130,6 @@ def generate_code_review(payload: ReviewRequestPayload):
 
 @app.post("/api/coach/explain")
 def generate_coach_explanation(payload: CoachRequestPayload):
-    """
-    Learning Coach Agent Explanation Endpoint for Prompt 6.
-    """
     try:
         state = {
             "progress": payload.progress or {},
@@ -137,41 +146,49 @@ def generate_coach_explanation(payload: CoachRequestPayload):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/supervisor/process")
-def process_agent_request(payload: ProcessRequest):
+@app.post("/api/agent")
+def unified_agent_endpoint(payload: AgentRequestPayload):
+    """
+    Unified LangGraph Supervisor Orchestration Endpoint for Prompt 7.
+    Routes deterministic requests ('hint', 'review', 'coach') through StateGraph.
+    """
+    req_type = (payload.request_type or "").strip().lower()
+
+    if req_type not in ("hint", "review", "coach"):
+        return {
+            "success": False,
+            "message": "Unsupported request type",
+            "supported_types": ["hint", "review", "coach"]
+        }
+
     try:
-        data = payload.model_dump()
-        req_type = data.get("request_type")
-        if req_type == "review":
-            state = {
-                "problem_id": data.get("problem_id"),
-                "problem_title": "",
-                "problem_description": "",
-                "code": data.get("code"),
-                "test_results": [],
-                "review_result": {}
+        state = payload.model_dump()
+        state["request_type"] = req_type
+        result_state = run_agent_workflow(state)
+
+        if result_state.get("error"):
+            return {
+                "success": False,
+                "message": result_state.get("error"),
+                "state": result_state
             }
-            result = process_review(state)
-            return {"success": True, "state": result, "response": result.get("review_result", {})}
-        elif req_type == "coach":
-            state = {
-                "progress": data.get("learner_progress", {}),
-                "recommendation": {},
-                "explanation": ""
-            }
-            result = process_coaching(state)
-            return {"success": True, "state": result, "response": result.get("explanation", {})}
-        else:
-            state = {
-                "problem_id": data.get("problem_id"),
-                "code": data.get("code"),
-                "hint_level": data.get("hint_level", 1),
-                "hint": ""
-            }
-            result = process_hint(state)
-            return {"success": True, "state": result, "response": result.get("hint", "")}
+
+        return {
+            "success": True,
+            "request_type": req_type,
+            "response": result_state.get("response", ""),
+            "state": result_state
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "success": False,
+            "message": f"Orchestrator error: {str(e)}"
+        }
+
+@app.post("/api/supervisor/process")
+def process_agent_request(payload: AgentRequestPayload):
+    """Legacy supervisor compatibility endpoint"""
+    return unified_agent_endpoint(payload)
 
 if __name__ == "__main__":
     import uvicorn

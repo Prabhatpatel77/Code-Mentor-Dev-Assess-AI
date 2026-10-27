@@ -17,6 +17,7 @@ export const fetchHealthStatus = async () => {
 export const fetchProblems = (filters) => getProblems(filters);
 export const fetchProblemById = (id) => getProblemById(id);
 export { createProblem, deleteProblem };
+export { invokeSupervisorAgent } from './agentService.js';
 
 export const submitCodeSolution = async (problemId, code, userId = 'default_user') => {
   const response = await api.post('/submissions', {

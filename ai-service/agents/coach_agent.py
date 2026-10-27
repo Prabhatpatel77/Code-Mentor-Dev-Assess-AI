@@ -5,7 +5,7 @@ def process_coaching(state: dict) -> dict:
     Learning Coach Agent.
     Generates a personalized coaching message explaining the progress & recommendation.
     """
-    progress = state.get("progress", {})
+    progress = state.get("progress") or state.get("learner_progress") or {}
     recommendation = state.get("recommendation", {})
 
     explanation = llm_service.generate_coach_explanation(
