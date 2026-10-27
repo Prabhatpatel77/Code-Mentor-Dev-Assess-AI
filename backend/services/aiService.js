@@ -28,17 +28,16 @@ export const checkAIServiceHealth = async () => {
  */
 export const sendToSupervisor = async (payload) => {
   try {
-    const response = await axios.post(`${AI_SERVICE_URL}/api/supervisor/process`, payload, {
-      timeout: 5000
+    const response = await axios.post(`${AI_SERVICE_URL}/api/agent`, payload, {
+      timeout: 8000
     });
     return response.data;
   } catch (error) {
     return {
       success: false,
       status: 'SERVICE_UNAVAILABLE',
-      message: `Failed to communicate with AI Service at ${AI_SERVICE_URL}. Ensure Python FastAPI app is running on port 8000.`,
-      error: error.message,
-      response: `[Not implemented yet] AI Agent Service endpoint setup verified. Full LangGraph agent orchestration will be active in Prompt 2.`
+      message: `Failed to communicate with AI Service at ${AI_SERVICE_URL}.`,
+      error: error.message
     };
   }
 };

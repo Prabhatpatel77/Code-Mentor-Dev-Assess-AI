@@ -148,6 +148,10 @@ export const executeJavaScript = (userCode, testCases = []) => {
   let overallStatus = 'Wrong Answer';
   if (isAllPassed) {
     overallStatus = 'Accepted';
+  } else if (testResults.some(r => r.error && r.error.includes('Time Limit Exceeded'))) {
+    overallStatus = 'Timeout';
+  } else if (testResults.some(r => r.error && (r.error.toLowerCase().includes('syntax') || r.error.toLowerCase().includes('unexpected token')))) {
+    overallStatus = 'Syntax Error';
   } else if (testResults.some(r => r.error)) {
     overallStatus = 'Runtime Error';
   }

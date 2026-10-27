@@ -9,7 +9,7 @@ const submissionSchema = new Schema({
   language: { type: String, default: 'javascript' },
   status: { 
     type: String, 
-    enum: ['Accepted', 'Wrong Answer', 'Runtime Error', 'Pending'], 
+    enum: ['Accepted', 'Wrong Answer', 'Runtime Error', 'Syntax Error', 'Timeout', 'Pending'], 
     default: 'Pending' 
   },
   testsPassed: { type: Number, default: 0 },

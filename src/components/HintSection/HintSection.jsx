@@ -10,7 +10,8 @@ const LEVEL_LABELS = {
 };
 
 export default function HintSection({ onRequestHint, loading, error, currentNextLevel }) {
-  const isMaxReached = currentNextLevel > 4;
+  const level = Math.min(Math.max(currentNextLevel || 1, 1), 4);
+  const isLevel4 = level === 4;
 
   return (
     <div className="hint-section-card">
@@ -20,16 +21,19 @@ export default function HintSection({ onRequestHint, loading, error, currentNext
           <span>Adaptive Hint Agent</span>
         </div>
         <span className="hint-level-badge">
-          {isMaxReached ? 'Max Level Reached' : `Next: Level ${currentNextLevel}`}
+          {isLevel4 ? 'Level 4: Debugging' : `Next: Level ${level}`}
         </span>
       </div>
 
       <div className="hint-description">
-        {isMaxReached ? (
-          <p>You have received all available hint levels (1 to 4) for this problem.</p>
+        {isLevel4 ? (
+          <p>
+            You are currently at <strong>Level 4 — Debugging</strong>.
+            Hints analyze your code and test results to identify errors without revealing the full solution.
+          </p>
         ) : (
           <p>
-            You are currently requesting <strong>{LEVEL_LABELS[currentNextLevel] || 'Level 1'}</strong>.
+            You are currently requesting <strong>{LEVEL_LABELS[level] || 'Level 1'}</strong>.
             Hints provide progressive guidance without spoiling the solution.
           </p>
         )}
@@ -44,16 +48,14 @@ export default function HintSection({ onRequestHint, loading, error, currentNext
 
       <button
         onClick={onRequestHint}
-        disabled={loading || isMaxReached}
+        disabled={loading}
         className="btn-hint"
       >
         <Sparkles size={16} className={loading ? 'animate-spin' : ''} />
         <span>
           {loading 
             ? 'Generating hint...' 
-            : isMaxReached 
-            ? 'All Hints Unlocked' 
-            : `Get Hint (${LEVEL_LABELS[currentNextLevel] || 'Level 1'})`
+            : `Get Hint (${LEVEL_LABELS[level] || 'Level 1'})`
           }
         </span>
       </button>

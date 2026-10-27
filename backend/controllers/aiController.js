@@ -5,6 +5,7 @@ import { HintUsage } from '../models/HintUsage.js';
 import { Submission } from '../models/Submission.js';
 import { SEED_PROBLEMS } from '../seed/seedProblems.js';
 import { executeJavaScript } from '../services/codeExecutor.js';
+import { calculateRecommendation } from '../services/coachService.js';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
@@ -62,11 +63,15 @@ export const requestHint = async (req, res, next) => {
 
     // 2. Determine hint progression (Level 1 -> 2 -> 3 -> 4 -> 4)
     let nextHintLevel = 1;
-    const userMemoryKey = `${userId}_${problemId}`;
+    const canonicalProblemId = String(problem._id || problemId);
+    const userMemoryKey = `${userId}_${canonicalProblemId}`;
 
     if (mongoose.connection.readyState === 1) {
       try {
-        const existingUsages = await HintUsage.find({ userId, problemId }).sort({ hintLevel: -1 }).exec();
+        const existingUsages = await HintUsage.find({
+          userId,
+          $or: [{ problemId: canonicalProblemId }, { problemId }]
+        }).sort({ hintLevel: -1 }).exec();
         if (existingUsages && existingUsages.length > 0) {
           const highestLevel = existingUsages[0].hintLevel;
           nextHintLevel = Math.min(highestLevel + 1, 4);
@@ -74,13 +79,12 @@ export const requestHint = async (req, res, next) => {
       } catch (e) {
         const prevLevel = memoryHintTracker.get(userMemoryKey) || 0;
         nextHintLevel = Math.min(prevLevel + 1, 4);
-        memoryHintTracker.set(userMemoryKey, nextHintLevel);
       }
     } else {
       const prevLevel = memoryHintTracker.get(userMemoryKey) || 0;
       nextHintLevel = Math.min(prevLevel + 1, 4);
-      memoryHintTracker.set(userMemoryKey, nextHintLevel);
     }
+    memoryHintTracker.set(userMemoryKey, nextHintLevel);
 
     // 3. Request hint from Python AI Service
     let generatedHint = '';
@@ -263,8 +267,15 @@ export const requestReview = async (req, res, next) => {
 };
 
 export const requestCoaching = async (req, res, next) => {
-  res.status(200).json({
-    success: true,
-    message: '[Not implemented yet] Learning coach agent pending Prompt 6.'
-  });
+  try {
+    const { userId = 'guest_user' } = req.body;
+    const recommendation = await calculateRecommendation(userId);
+    res.status(200).json({
+      success: true,
+      recommendation,
+      response: recommendation.explanation || recommendation.reason
+    });
+  } catch (error) {
+    next(error);
+  }
 };

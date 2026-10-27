@@ -41,6 +41,14 @@ export default function ProblemDetail() {
     async function load() {
       setLoading(true);
       setError(null);
+      setTestResult(null);
+      setCodeReview(null);
+      setExecutionError(null);
+      setReviewError(null);
+      setHintError(null);
+      setHintHistory([]);
+      setNextHintLevel(1);
+
       try {
         const response = await getProblemById(id);
         if (response.data) {
@@ -94,7 +102,6 @@ export default function ProblemDetail() {
   };
 
   const handleRequestHint = async () => {
-    if (nextHintLevel > 4) return;
     setHintLoading(true);
     setHintError(null);
 
@@ -110,7 +117,7 @@ export default function ProblemDetail() {
         };
 
         setHintHistory((prev) => [...prev, newHintObj]);
-        setNextHintLevel(Math.min(receivedLevel + 1, 5));
+        setNextHintLevel(Math.min(receivedLevel + 1, 4));
       } else {
         setHintError('Could not retrieve hint. Please try again.');
       }
