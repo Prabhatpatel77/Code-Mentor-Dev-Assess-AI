@@ -1,0 +1,40 @@
+/* src/components/HealthStatusCard/HealthStatusCard.css */
+.health-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.health-service-box {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.health-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.health-box-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.health-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.health-detail-row {
+  display: flex;
+  justify-content: space-between;
+}

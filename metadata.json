@@ -1,0 +1,6 @@
+{
+  "name": "CodeMentorAI",
+  "description": "AI Coding Assessment Platform with JavaScript runner, LangGraph Supervisor, adaptive hints, and learning coach.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
