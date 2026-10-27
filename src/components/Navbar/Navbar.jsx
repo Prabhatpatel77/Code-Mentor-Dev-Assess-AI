@@ -29,7 +29,9 @@ export default function Navbar() {
         <nav className="navbar-nav">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+            const isActive = location.pathname === item.path || 
+              (item.path !== '/' && location.pathname.startsWith(item.path)) || 
+              (item.path === '/progress' && location.pathname === '/dashboard');
             return (
               <Link
                 key={item.path}

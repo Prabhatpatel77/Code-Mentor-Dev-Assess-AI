@@ -17,6 +17,8 @@ const HINT_TYPES = {
 
 // In-memory hint progression tracker when DB is offline
 const memoryHintTracker = new Map();
+export const memoryHintUsages = [];
+export const getMemoryHintUsages = () => memoryHintUsages;
 
 /**
  * POST /api/hints or POST /api/ai/hint
@@ -111,7 +113,14 @@ export const requestHint = async (req, res, next) => {
       generatedHint = fallbackHints[nextHintLevel] || fallbackHints[1];
     }
 
-    // 4. Record Hint Usage in MongoDB
+    // 4. Record Hint Usage
+    memoryHintUsages.push({
+      userId,
+      problemId: String(problem._id || problemId),
+      hintLevel: nextHintLevel,
+      createdAt: new Date()
+    });
+
     if (mongoose.connection.readyState === 1) {
       try {
         await HintUsage.create({

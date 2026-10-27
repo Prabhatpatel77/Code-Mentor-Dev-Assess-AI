@@ -18,6 +18,7 @@ export default function App() {
             <Route path="/problems" element={<Problems />} />
             <Route path="/problems/:id" element={<ProblemDetail />} />
             <Route path="/progress" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/status" element={<Status />} />
           </Routes>
         </main>

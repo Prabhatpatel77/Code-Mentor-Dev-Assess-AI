@@ -210,4 +210,64 @@ Test Results: {json.dumps(test_results if test_results else [])}
             print(f"[Gemini Review Warning] {e}")
             return fallback_review
 
+    def generate_coach_explanation(self, progress: dict, recommendation: dict) -> str:
+        """
+        Calls Gemini API to generate a concise, personalized coaching explanation based on progress & recommendations.
+        """
+        api_key = os.getenv("GEMINI_API_KEY", self.api_key)
+        
+        attempted = progress.get("attempted", 0)
+        solved = progress.get("solved", 0)
+        accuracy = progress.get("accuracy", 0)
+        rec_topic = recommendation.get("topic", "Arrays")
+        rec_diff = recommendation.get("difficulty", "Easy")
+        reason = recommendation.get("reason", "")
+
+        fallback_explanation = f"You have solved {solved} out of {attempted} attempted problems ({accuracy}% accuracy). {reason} I recommend practicing {rec_diff} problems in {rec_topic}."
+
+        if not api_key:
+            return fallback_explanation
+
+        system_instruction = """
+You are an AI Learning Coach for a coding assessment platform.
+Write a friendly, encouraging, 2-3 sentence personalized learning recommendation summary for the learner.
+Mention their performance and explain why the recommended topic and difficulty will help them grow.
+Do not invent statistics; strictly use the provided progress and recommendation data.
+"""
+        prompt_content = f"Progress: {json.dumps(progress)}\nRecommendation: {json.dumps(recommendation)}"
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": f"{system_instruction}\n\n{prompt_content}"}]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.4,
+                "maxOutputTokens": 300
+            }
+        }
+
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                res_data = json.loads(response.read().decode('utf-8'))
+                candidates = res_data.get('candidates', [])
+                if candidates and 'content' in candidates[0]:
+                    parts = candidates[0]['content'].get('parts', [])
+                    if parts:
+                        return parts[0].get('text', '').strip()
+                return fallback_explanation
+        except Exception as e:
+            print(f"[Gemini Coach Warning] {e}")
+            return fallback_explanation
+
 llm_service = LLMService()
+

@@ -3,6 +3,9 @@ import { SEED_PROBLEMS } from '../seed/seedProblems.js';
 import { Problem } from '../models/Problem.js';
 import { Submission } from '../models/Submission.js';
 
+export const memorySubmissions = [];
+export const getMemorySubmissions = () => memorySubmissions;
+
 /**
  * POST /api/submissions/run
  * Executes submitted code against test cases without creating a database submission record
@@ -125,6 +128,11 @@ export const submitSolution = async (req, res, next) => {
       executionTimeMs: executionResult.executionTimeMs,
       createdAt: new Date()
     };
+
+    memorySubmissions.push({
+      ...submissionData,
+      testResults: executionResult.results
+    });
 
     try {
       await Submission.create({

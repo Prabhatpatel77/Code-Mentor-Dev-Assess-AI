@@ -1,143 +1,119 @@
 import React, { useState, useEffect } from 'react';
-import { requestCoachRecommendations } from '../../services/api';
-import { Sparkles, Trophy, Lightbulb, Target, BarChart2, Bot } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { getCoachProgress, getCoachTopics, getCoachRecommendation } from '../../services/coachService';
+import ProgressSummary from '../../components/ProgressSummary/ProgressSummary';
+import TopicPerformance from '../../components/TopicPerformance/TopicPerformance';
+import RecommendationCard from '../../components/RecommendationCard/RecommendationCard';
+import { Sparkles, RefreshCw, AlertCircle, Code2, ArrowRight } from 'lucide-react';
 import './Dashboard.css';
 
 export default function Dashboard() {
-  const [loading, setLoading] = useState(false);
-  const [recommendations, setRecommendations] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [progress, setProgress] = useState(null);
+  const [topics, setTopics] = useState([]);
+  const [recommendation, setRecommendation] = useState(null);
 
-  const progressData = {
-    attemptedCount: 3,
-    solvedCount: 2,
-    hintsUsedTotal: 4,
-    topicPerformance: [
-      { topic: 'Arrays', attempted: 2, solved: 1, accuracy: 50 },
-      { topic: 'Strings', attempted: 1, solved: 1, accuracy: 100 },
-      { topic: 'HashMap', attempted: 0, solved: 0, accuracy: 0 },
-      { topic: 'Two Pointers', attempted: 0, solved: 0, accuracy: 0 }
-    ]
-  };
-
-  const fetchRecommendations = async () => {
+  const loadDashboardData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await requestCoachRecommendations(progressData);
-      setRecommendations(res.data?.response || res.data?.learner_progress || 'Coach recommendations requested.');
+      const [progRes, topicsRes, recRes] = await Promise.all([
+        getCoachProgress(),
+        getCoachTopics(),
+        getCoachRecommendation()
+      ]);
+
+      if (progRes && progRes.success) {
+        setProgress(progRes.progress);
+      }
+      if (topicsRes && topicsRes.success) {
+        setTopics(topicsRes.topics || []);
+      }
+      if (recRes && recRes.success) {
+        setRecommendation(recRes.recommendation);
+      }
     } catch (err) {
-      setRecommendations(`Coach error: ${err.message}`);
+      console.error('Failed to load dashboard data:', err);
+      setError('Unable to load your learning progress. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRecommendations();
+    loadDashboardData();
   }, []);
 
   return (
     <div className="dashboard-container">
       {/* Header */}
-      <div className="card" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+      <div className="card dashboard-header-card">
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Sparkles size={24} style={{ color: 'var(--accent-purple)' }} />
             <span>Learning Coach Dashboard</span>
           </h1>
           <p className="text-muted text-sm mt-1">
-            Personalized progress analytics and rule-based learning recommendations.
+            Deterministic progress analytics and rule-based learning recommendations.
           </p>
         </div>
 
         <button
-          onClick={fetchRecommendations}
+          onClick={loadDashboardData}
           disabled={loading}
-          className="btn-primary"
-          style={{ backgroundColor: 'var(--accent-purple)' }}
+          className="btn-secondary"
+          style={{ padding: '0.45rem 0.85rem' }}
+          title="Refresh Progress"
         >
-          <Bot size={16} className={loading ? 'animate-spin' : ''} />
-          <span>Refresh Coach Advice</span>
+          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          <span>Refresh</span>
         </button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid-3">
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <div className="flex justify-between items-center text-muted">
-            <span className="text-xs font-mono" style={{ fontWeight: 600, textTransform: 'uppercase' }}>Attempted / Solved</span>
-            <Trophy size={20} style={{ color: 'var(--accent-amber)' }} />
-          </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800 }}>
-            {progressData.solvedCount} <span className="text-muted" style={{ fontSize: '0.9rem', fontWeight: 'normal' }}>/ {progressData.attemptedCount} Solved</span>
-          </div>
+      {/* Error state */}
+      {error && (
+        <div className="dashboard-error-card">
+          <AlertCircle size={20} />
+          <span>{error}</span>
         </div>
+      )}
 
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <div className="flex justify-between items-center text-muted">
-            <span className="text-xs font-mono" style={{ fontWeight: 600, textTransform: 'uppercase' }}>Hints Requested</span>
-            <Lightbulb size={20} style={{ color: 'var(--accent-amber)' }} />
-          </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800 }}>
-            {progressData.hintsUsedTotal} <span className="text-muted" style={{ fontSize: '0.9rem', fontWeight: 'normal' }}>Hints</span>
-          </div>
+      {/* Loading state */}
+      {loading ? (
+        <div className="card dashboard-loading-card">
+          Loading your progress...
         </div>
-
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <div className="flex justify-between items-center text-muted">
-            <span className="text-xs font-mono" style={{ fontWeight: 600, textTransform: 'uppercase' }}>Overall Accuracy</span>
-            <Target size={20} style={{ color: 'var(--accent-emerald)' }} />
-          </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>
-            {Math.round((progressData.solvedCount / progressData.attemptedCount) * 100)}%
-          </div>
-        </div>
-      </div>
-
-      {/* Topic Breakdown */}
-      <div className="card">
-        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          <BarChart2 size={20} style={{ color: 'var(--accent-indigo)' }} />
-          <span>Topic Performance Breakdown</span>
-        </h2>
-
-        <div className="topic-perf-grid">
-          {progressData.topicPerformance.map((tp) => (
-            <div key={tp.topic} className="topic-perf-card">
-              <div className="flex justify-between items-center text-sm">
-                <span style={{ fontWeight: 600 }}>{tp.topic}</span>
-                <span className="text-xs font-mono text-muted">{tp.solved} / {tp.attempted} solved</span>
-              </div>
-              <div className="topic-progress-bar-bg">
-                <div
-                  className="topic-progress-bar-fill"
-                  style={{ width: `${tp.accuracy}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Learning Coach Recommendation Box */}
-      <div className="card" style={{ borderColor: 'rgba(168, 85, 247, 0.4)' }}>
-        <div className="flex items-center gap-3" style={{ marginBottom: '1rem' }}>
-          <div style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', padding: '0.5rem', borderRadius: '0.75rem', display: 'flex' }}>
-            <Bot size={24} />
+      ) : progress && progress.attempted === 0 ? (
+        /* Empty state for new learner */
+        <div className="card dashboard-empty-card">
+          <div className="dashboard-empty-icon">
+            <Code2 size={36} />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>AI Learning Coach Recommendation</h2>
-            <p className="text-muted text-xs">Rule-based assessment feedback based on topic accuracy</p>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              No learning data yet.
+            </h2>
+            <p className="text-muted text-sm mt-1" style={{ maxWidth: '450px' }}>
+              Solve your first problem to start tracking performance metrics, topic accuracy, and personalized AI coaching advice.
+            </p>
           </div>
+          <Link to="/problems" className="btn-primary" style={{ marginTop: '0.5rem' }}>
+            <span>Explore Coding Challenges</span>
+            <ArrowRight size={16} />
+          </Link>
         </div>
+      ) : (
+        /* Active Dashboard */
+        <>
+          <ProgressSummary progress={progress} />
 
-        <div style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-subtle)', borderRadius: '0.75rem', padding: '1rem', fontSize: '0.9rem', fontFamily: 'monospace', color: '#e9d5ff', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-          {recommendations ? (
-            typeof recommendations === 'string' ? recommendations : JSON.stringify(recommendations, null, 2)
-          ) : (
-            'Rule-based recommendation engine active: Low performance in Arrays detected → Recommend focusing on Array & Two-Pointer practice.'
-          )}
-        </div>
-      </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
+            <TopicPerformance topics={topics} />
+            <RecommendationCard recommendation={recommendation} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

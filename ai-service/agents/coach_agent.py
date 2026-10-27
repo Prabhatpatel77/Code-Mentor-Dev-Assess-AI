@@ -1,14 +1,18 @@
-# TODO: Implement Learning Coach Agent in Prompt 2
-# Tracks attempted/solved problems, hints used, topic performance, and rule-based recommendations.
+from services.llm_service import llm_service
 
 def process_coaching(state: dict) -> dict:
     """
-    Learning Coach Agent [TODO in Prompt 2].
-    Provides recommendations based on learner history.
+    Learning Coach Agent.
+    Generates a personalized coaching message explaining the progress & recommendation.
     """
-    state["response"] = "[Not implemented yet] Learning Coach recommendations will be generated in Prompt 2."
-    state["learner_progress"] = {
-        "status": "TODO",
-        "message": "Learning Coach implementation pending Prompt 2."
-    }
+    progress = state.get("progress", {})
+    recommendation = state.get("recommendation", {})
+
+    explanation = llm_service.generate_coach_explanation(
+        progress=progress,
+        recommendation=recommendation
+    )
+
+    state["explanation"] = explanation
+    state["response"] = explanation
     return state

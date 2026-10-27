@@ -9,10 +9,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from agents.hint_agent import process_hint
 from agents.review_agent import process_review
+from agents.coach_agent import process_coaching
 
 app = FastAPI(
     title="CodeMentorAI - AI Service",
-    description="Python FastAPI Code Review & Hint Agent Service",
+    description="Python FastAPI Code Review, Hint, and Learning Coach Agent Service",
     version="1.0.0"
 )
 
@@ -31,6 +32,10 @@ class ReviewRequestPayload(BaseModel):
     problemDescription: Optional[str] = ""
     code: Optional[str] = ""
     testResults: Optional[List[Any]] = []
+
+class CoachRequestPayload(BaseModel):
+    progress: Optional[Dict[str, Any]] = {}
+    recommendation: Optional[Dict[str, Any]] = {}
 
 class ProcessRequest(BaseModel):
     user_id: str = "default_user"
@@ -92,9 +97,6 @@ def generate_adaptive_hint(payload: HintRequestPayload):
 
 @app.post("/api/review")
 def generate_code_review(payload: ReviewRequestPayload):
-    """
-    Code Review Agent Endpoint for Prompt 5.
-    """
     try:
         state = {
             "problem_id": payload.problemId,
@@ -114,11 +116,33 @@ def generate_code_review(payload: ReviewRequestPayload):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/coach/explain")
+def generate_coach_explanation(payload: CoachRequestPayload):
+    """
+    Learning Coach Agent Explanation Endpoint for Prompt 6.
+    """
+    try:
+        state = {
+            "progress": payload.progress or {},
+            "recommendation": payload.recommendation or {},
+            "explanation": ""
+        }
+
+        result_state = process_coaching(state)
+
+        return {
+            "success": True,
+            "explanation": result_state.get("explanation", "")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/supervisor/process")
 def process_agent_request(payload: ProcessRequest):
     try:
         data = payload.model_dump()
-        if data.get("request_type") == "review":
+        req_type = data.get("request_type")
+        if req_type == "review":
             state = {
                 "problem_id": data.get("problem_id"),
                 "problem_title": "",
@@ -129,6 +153,14 @@ def process_agent_request(payload: ProcessRequest):
             }
             result = process_review(state)
             return {"success": True, "state": result, "response": result.get("review_result", {})}
+        elif req_type == "coach":
+            state = {
+                "progress": data.get("learner_progress", {}),
+                "recommendation": {},
+                "explanation": ""
+            }
+            result = process_coaching(state)
+            return {"success": True, "state": result, "response": result.get("explanation", {})}
         else:
             state = {
                 "problem_id": data.get("problem_id"),
