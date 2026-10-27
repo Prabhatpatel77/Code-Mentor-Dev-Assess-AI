@@ -1,77 +1,43 @@
 /* src/pages/ProblemDetail/ProblemDetail.css */
-.problem-detail-layout {
-  min-height: calc(100vh - 65px);
-  display: flex;
-  flex-direction: column;
-}
-
-.problem-detail-topbar {
-  background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  padding: 0.75rem 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.problem-workspace-grid {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: calc(100vh - 130px);
-}
-
-.problem-left-panel {
-  padding: 1.5rem;
-  overflow-y: auto;
+.problem-detail-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  border-right: 1px solid var(--border-color);
 }
 
-.problem-right-panel {
+.problem-header-card {
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-primary);
+  gap: 1rem;
 }
 
-.editor-header {
-  background-color: var(--bg-secondary);
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-color);
+.problem-meta-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.75rem;
 }
 
-.editor-body {
-  flex: 1;
-  padding: 1rem;
-  background-color: var(--bg-primary);
-}
-
-.code-textarea {
-  width: 100%;
-  height: 100%;
-  min-height: 380px;
-  background-color: #020617;
-  border: 1px solid var(--border-color);
+.problem-example-card {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-subtle);
   border-radius: 0.5rem;
-  padding: 1rem;
-  color: #e2e8f0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  padding: 0.85rem;
   font-size: 0.85rem;
-  resize: none;
-  outline: none;
-  line-height: 1.6;
+  font-family: monospace;
 }
 
-.test-output-panel {
-  border-top: 1px solid var(--border-color);
+.placeholder-editor-box {
   background-color: var(--bg-secondary);
-  padding: 1rem;
+  border: 1px dashed var(--border-color);
+  border-radius: 1rem;
+  padding: 3rem 2rem;
+  text-align: center;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.75rem;
+  color: var(--text-muted);
 }

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getProblems, getProblemById, createProblem, deleteProblem } from './problemService.js';
 
 const api = axios.create({
   baseURL: '/api',
@@ -12,15 +13,10 @@ export const fetchHealthStatus = async () => {
   return response.data;
 };
 
-export const fetchProblems = async () => {
-  const response = await api.get('/problems');
-  return response.data;
-};
-
-export const fetchProblemById = async (id) => {
-  const response = await api.get(`/problems/${id}`);
-  return response.data;
-};
+// Delegate problem calls to problemService
+export const fetchProblems = (filters) => getProblems(filters);
+export const fetchProblemById = (id) => getProblemById(id);
+export { createProblem, deleteProblem };
 
 export const submitCodeSolution = async (problemId, code, userId = 'default_user') => {
   const response = await api.post('/submissions', {

@@ -1,108 +1,63 @@
 import { Problem } from '../models/Problem.js';
+import { SEED_PROBLEMS } from '../seed/seedProblems.js';
 
-// Predefined seed problems for immediate execution & testing
-export const INITIAL_PROBLEMS = [
-  {
-    _id: 'p1_two_sum',
-    title: 'Two Sum',
-    difficulty: 'Easy',
-    topic: 'Arrays',
-    description: 'Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`. You may assume that each input would have exactly one solution.',
-    starterCode: `function twoSum(nums, target) {
-  // Write your solution here
-  for (let i = 0; i < nums.length; i++) {
-    for (let j = i + 1; j < nums.length; j++) {
-      if (nums[i] + nums[j] === target) {
-        return [i, j];
-      }
-    }
+// Helper to filter public test cases (exclude hidden test cases for learner API)
+const sanitizeProblemForLearner = (problemDoc) => {
+  const p = problemDoc.toObject ? problemDoc.toObject() : { ...problemDoc };
+  if (p.testCases) {
+    p.testCases = p.testCases.filter(tc => !tc.isHidden);
   }
-  return [];
-}`,
-    examples: [
-      {
-        input: 'nums = [2, 7, 11, 15], target = 9',
-        output: '[0, 1]',
-        explanation: 'Because nums[0] + nums[1] == 9, we return [0, 1].'
-      }
-    ],
-    testCases: [
-      { input: [[2, 7, 11, 15], 9], expectedOutput: [0, 1] },
-      { input: [[3, 2, 4], 6], expectedOutput: [1, 2] },
-      { input: [[3, 3], 6], expectedOutput: [0, 1] }
-    ]
-  },
-  {
-    _id: 'p2_valid_palindrome',
-    title: 'Valid Palindrome',
-    difficulty: 'Easy',
-    topic: 'Strings',
-    description: 'A phrase is a palindrome if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward.',
-    starterCode: `function isPalindrome(s) {
-  // Write your solution here
-  const cleaned = s.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return cleaned === cleaned.split('').reverse().join('');
-}`,
-    examples: [
-      {
-        input: 's = "A man, a plan, a canal: Panama"',
-        output: 'true',
-        explanation: '"amanaplanacanalpanama" is a palindrome.'
-      }
-    ],
-    testCases: [
-      { input: 'A man, a plan, a canal: Panama', expectedOutput: true },
-      { input: 'race a car', expectedOutput: false },
-      { input: ' ', expectedOutput: true }
-    ]
-  },
-  {
-    _id: 'p3_find_max',
-    title: 'Find Maximum Element',
-    difficulty: 'Easy',
-    topic: 'Arrays',
-    description: 'Given an array of numbers `nums`, return the maximum number in the array.',
-    starterCode: `function findMax(nums) {
-  // Write your solution here
-  return Math.max(...nums);
-}`,
-    examples: [
-      {
-        input: 'nums = [1, 5, 3, 9, 2]',
-        output: '9',
-        explanation: 'The largest element in the array is 9.'
-      }
-    ],
-    testCases: [
-      { input: [[1, 5, 3, 9, 2]], expectedOutput: 9 },
-      { input: [[-10, -5, -20]], expectedOutput: -5 }
-    ]
-  }
-];
+  return p;
+};
 
+/**
+ * GET /api/problems
+ * Query params: ?difficulty=Easy&topic=Arrays
+ */
 export const getProblems = async (req, res, next) => {
   try {
-    let problems = [];
-    try {
-      problems = await Problem.find({});
-    } catch (e) {
-      // DB offline fallback
+    const { difficulty, topic } = req.query;
+    const filter = {};
+
+    if (difficulty) {
+      filter.difficulty = difficulty;
+    }
+    if (topic) {
+      filter.topic = topic;
     }
 
-    if (!problems || problems.length === 0) {
-      problems = INITIAL_PROBLEMS;
+    let problems = [];
+    try {
+      problems = await Problem.find(filter).sort({ createdAt: -1 });
+    } catch (e) {
+      console.warn(`[DB Fetch Fallback] Using memory fallback: ${e.message}`);
     }
+
+    // Memory fallback if DB has no records or is unreachable
+    if (!problems || problems.length === 0) {
+      problems = SEED_PROBLEMS.filter(p => {
+        const matchesDiff = !difficulty || p.difficulty.toLowerCase() === difficulty.toLowerCase();
+        const matchesTopic = !topic || p.topic.toLowerCase() === topic.toLowerCase();
+        return matchesDiff && matchesTopic;
+      }).map((p, idx) => ({ _id: `seed_${idx + 1}`, ...p }));
+    }
+
+    // Sanitize test cases for learner safety
+    const sanitizedProblems = problems.map(p => sanitizeProblemForLearner(p));
 
     res.status(200).json({
       success: true,
-      count: problems.length,
-      data: problems
+      count: sanitizedProblems.length,
+      data: sanitizedProblems
     });
   } catch (error) {
     next(error);
   }
 };
 
+/**
+ * GET /api/problems/:id
+ */
 export const getProblemById = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -111,11 +66,19 @@ export const getProblemById = async (req, res, next) => {
     try {
       problem = await Problem.findById(id);
     } catch (e) {
-      // DB error or non-ObjectId string ID
+      // Non-ObjectId string or invalid format
     }
 
     if (!problem) {
-      problem = INITIAL_PROBLEMS.find(p => p._id === id || p.title.toLowerCase().replace(/\s+/g, '_') === id);
+      // Memory fallback lookup
+      problem = SEED_PROBLEMS.find((p, idx) => 
+        `seed_${idx + 1}` === id || 
+        p.title.toLowerCase().replace(/\s+/g, '_') === id.toLowerCase() ||
+        p.title.toLowerCase() === id.toLowerCase()
+      );
+      if (problem) {
+        problem = { _id: id, ...problem };
+      }
     }
 
     if (!problem) {
@@ -125,9 +88,123 @@ export const getProblemById = async (req, res, next) => {
       });
     }
 
+    const sanitized = sanitizeProblemForLearner(problem);
+
     res.status(200).json({
       success: true,
-      data: problem
+      data: sanitized
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/problems
+ */
+export const createProblem = async (req, res, next) => {
+  try {
+    const { title, description, difficulty, topic, examples = [], testCases = [], starterCode } = req.body;
+
+    // Validation
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title is required'
+      });
+    }
+
+    if (!description || typeof description !== 'string' || !description.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Description is required'
+      });
+    }
+
+    const validDifficulties = ['Easy', 'Medium', 'Hard'];
+    if (!difficulty || !validDifficulties.includes(difficulty)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Difficulty must be one of: Easy, Medium, Hard'
+      });
+    }
+
+    if (!topic || typeof topic !== 'string' || !topic.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Topic is required'
+      });
+    }
+
+    let newProblem = null;
+    try {
+      newProblem = await Problem.create({
+        title: title.trim(),
+        description: description.trim(),
+        difficulty,
+        topic: topic.trim(),
+        examples,
+        testCases,
+        starterCode
+      });
+    } catch (dbErr) {
+      // Memory fallback if DB is disconnected
+      newProblem = {
+        _id: `mem_${Date.now()}`,
+        title: title.trim(),
+        description: description.trim(),
+        difficulty,
+        topic: topic.trim(),
+        examples,
+        testCases,
+        starterCode,
+        createdAt: new Date()
+      };
+      SEED_PROBLEMS.push(newProblem);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Problem created successfully',
+      data: newProblem
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/problems/:id
+ */
+export const deleteProblem = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    let deleted = null;
+
+    try {
+      deleted = await Problem.findByIdAndDelete(id);
+    } catch (e) {
+      // Invalid ObjectId format
+    }
+
+    if (!deleted) {
+      // Try memory fallback deletion
+      const index = SEED_PROBLEMS.findIndex((p, idx) => `seed_${idx + 1}` === id || p._id === id);
+      if (index !== -1) {
+        deleted = SEED_PROBLEMS.splice(index, 1)[0];
+      }
+    }
+
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: `Problem with ID '${id}' not found`
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Problem deleted successfully'
     });
   } catch (error) {
     next(error);

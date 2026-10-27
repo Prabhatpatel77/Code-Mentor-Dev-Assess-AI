@@ -15,16 +15,28 @@ const testCaseSchema = new Schema({
 });
 
 const problemSchema = new Schema({
-  title: { type: String, required: true, trim: true },
-  description: { type: String, required: true },
+  title: { 
+    type: String, 
+    required: [true, 'Title is required'], 
+    trim: true 
+  },
+  description: { 
+    type: String, 
+    required: [true, 'Description is required'] 
+  },
   difficulty: { 
     type: String, 
-    enum: ['Easy', 'Medium', 'Hard'], 
+    required: [true, 'Difficulty is required'],
+    enum: {
+      values: ['Easy', 'Medium', 'Hard'],
+      message: 'Difficulty must be Easy, Medium, or Hard'
+    },
     default: 'Easy' 
   },
   topic: { 
     type: String, 
-    required: true
+    required: [true, 'Topic is required'],
+    trim: true
   },
   starterCode: { 
     type: String, 

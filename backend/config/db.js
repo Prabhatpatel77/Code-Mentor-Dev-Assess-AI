@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { seedDatabase } from '../seed/seedProblems.js';
 
 let isConnected = false;
 
@@ -10,13 +11,16 @@ export const connectDB = async () => {
   }
 
   try {
-    // Setting bufferCommands to false so operations fail fast if DB is disconnected
     mongoose.set('strictQuery', false);
     await mongoose.connect(mongoURI, {
       serverSelectionTimeoutMS: 2000,
     });
     isConnected = true;
     console.log(`[MongoDB] Successfully connected to ${mongoURI}`);
+    
+    // Auto-seed sample problems if collection is empty
+    await seedDatabase();
+
     return { connected: true, uri: mongoURI };
   } catch (error) {
     console.warn(`[MongoDB Warning] Could not connect to ${mongoURI}: ${error.message}`);

@@ -1,5 +1,5 @@
 import { executeJavaScript } from '../services/codeExecutionService.js';
-import { INITIAL_PROBLEMS } from './problemController.js';
+import { SEED_PROBLEMS } from '../seed/seedProblems.js';
 import { Problem } from '../models/Problem.js';
 import { Submission } from '../models/Submission.js';
 
@@ -23,7 +23,7 @@ export const submitSolution = async (req, res, next) => {
     }
 
     if (!problem) {
-      problem = INITIAL_PROBLEMS.find(p => p._id === problemId);
+      problem = SEED_PROBLEMS.find((p, idx) => `seed_${idx + 1}` === problemId || p._id === problemId || p.title.toLowerCase().replace(/\s+/g, '_') === problemId);
     }
 
     if (!problem) {
