@@ -1,0 +1,116 @@
+/* src/components/TestResults/TestResults.css */
+.test-results-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.test-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.test-results-title {
+  font-size: 0.8rem;
+  font-family: monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.test-results-summary-bar {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-family: monospace;
+  color: var(--text-muted);
+}
+
+.test-cases-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.test-case-item {
+  border-radius: 0.5rem;
+  padding: 0.65rem;
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+
+.test-case-item.passed {
+  background-color: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.test-case-item.failed {
+  background-color: rgba(244, 63, 94, 0.05);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+.test-case-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  margin-bottom: 0.35rem;
+}
+
+.test-case-header.passed { color: var(--accent-emerald); }
+.test-case-header.failed { color: var(--accent-rose); }
+
+.test-case-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.test-case-error {
+  color: var(--accent-rose);
+  margin-top: 0.25rem;
+  word-break: break-word;
+}
+
+.test-results-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-family: monospace;
+  border: 1px dashed var(--border-color);
+  border-radius: 0.5rem;
+}
+
+.test-results-loading {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-family: monospace;
+}
+
+.test-results-error {
+  background-color: rgba(244, 63, 94, 0.1);
+  border: 1px solid var(--accent-rose);
+  color: #fda4af;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
