@@ -3,6 +3,7 @@ import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import http from 'node:http';
 import { spawn } from 'node:child_process';
+import cookieParser from 'cookie-parser';
 import { connectDB } from './backend/config/db.js';
 import apiRouter from './backend/routes/index.js';
 import { errorHandler } from './backend/middleware/errorHandler.js';
@@ -35,6 +36,7 @@ async function startServer() {
 
   // Body parser
   app.use(express.json());
+  app.use(cookieParser());
 
   // Ensure Python AI service is running
   ensureAIServiceRunning();

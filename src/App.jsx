@@ -7,22 +7,30 @@ import ProblemDetail from './pages/ProblemDetail/ProblemDetail';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Status from './pages/Status/Status';
 
+import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
+
 export default function App() {
   return (
     <Router>
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', color: 'var(--text-main)' }}>
-        <Navbar />
-        <main style={{ flex: 1 }}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/problems" element={<Problems />} />
-            <Route path="/problems/:id" element={<ProblemDetail />} />
-            <Route path="/progress" element={<Dashboard />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/status" element={<Status />} />
-          </Routes>
-        </main>
-      </div>
+      <AuthProvider>
+        <ThemeProvider>
+          <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', color: 'var(--text-main)' }}>
+            <Navbar />
+            <main style={{ flex: 1 }}>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/problems" element={<Problems />} />
+                <Route path="/problems/:id" element={<ProblemDetail />} />
+                <Route path="/progress" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/status" element={<Status />} />
+              </Routes>
+            </main>
+          </div>
+        </ThemeProvider>
+      </AuthProvider>
     </Router>
   );
 }
+
