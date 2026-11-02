@@ -46,3 +46,6 @@
 .problem-item-card:hover {
   border-color: rgba(99, 102, 241, 0.5);
 }
+@media (max-width: 767px) {
+  .problems-search-input-wrapper { width: 100%; }
+}

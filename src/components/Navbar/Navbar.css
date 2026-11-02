@@ -1,5 +1,4 @@
 /* src/components/Navbar/Navbar.css */
-/* src/components/Navbar/Navbar.css */
 .navbar {
   background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
@@ -80,4 +79,39 @@
   background-color: rgba(99, 102, 241, 0.1);
   color: #6366f1;
 }
+
+.navbar-burger {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-main);
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+@media (max-width: 767px) {
+  .navbar-burger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .navbar-nav {
+    display: none;
+    position: absolute;
+    top: 60px;
+    left: 0;
+    right: 0;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    flex-direction: column;
+    padding: 1rem;
+    gap: 0.5rem;
+  }
+
+  .navbar-nav.open {
+    display: flex;
+  }
+}
+
 
