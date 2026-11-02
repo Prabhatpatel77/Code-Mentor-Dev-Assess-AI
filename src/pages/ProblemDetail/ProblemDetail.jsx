@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getProblemById } from '../../services/problemService';
 import { runCode, submitSolution } from '../../services/submissionService';
-import { getAdaptiveHint } from '../../services/hintService';
+import { getAdaptiveHint, getCompleteSolution } from '../../services/hintService';
 import { getCodeReview } from '../../services/reviewService';
 import CodeEditor from '../../components/CodeEditor/CodeEditor';
 import TestResults from '../../components/TestResults/TestResults';
@@ -37,6 +37,13 @@ export default function ProblemDetail() {
   const [reviewError, setReviewError] = useState(null);
   const [codeReview, setCodeReview] = useState(null);
 
+  // Complete Solution Reveal state
+  const [solutionLoading, setSolutionLoading] = useState(false);
+  const [solutionError, setSolutionError] = useState(null);
+  const [solutionData, setSolutionData] = useState(null);
+  const [solutionValidation, setSolutionValidation] = useState(null);
+  const [showSolutionConfirmation, setShowSolutionConfirmation] = useState(false);
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -48,6 +55,11 @@ export default function ProblemDetail() {
       setHintError(null);
       setHintHistory([]);
       setNextHintLevel(1);
+      setSolutionLoading(false);
+      setSolutionError(null);
+      setSolutionData(null);
+      setSolutionValidation(null);
+      setShowSolutionConfirmation(false);
 
       try {
         const response = await getProblemById(id);
@@ -126,6 +138,35 @@ export default function ProblemDetail() {
       setHintError(err.response?.data?.message || 'Failed to request AI hint. Please check your connection.');
     } finally {
       setHintLoading(false);
+    }
+  };
+
+  const handleRevealSolutionClick = () => {
+    setShowSolutionConfirmation(true);
+  };
+
+  const handleCancelRevealSolution = () => {
+    setShowSolutionConfirmation(false);
+  };
+
+  const handleConfirmRevealSolution = async () => {
+    setShowSolutionConfirmation(false);
+    setSolutionLoading(true);
+    setSolutionError(null);
+
+    try {
+      const res = await getCompleteSolution(problem._id, 'guest_user');
+      if (res && res.success) {
+        setSolutionData(res.solution);
+        setSolutionValidation(res.validation);
+      } else {
+        setSolutionError(res.message || 'Failed to retrieve complete solution.');
+      }
+    } catch (err) {
+      console.error('Complete solution error:', err);
+      setSolutionError(err.response?.data?.message || 'Failed to retrieve complete solution. Ensure you have reached Hint Level 4.');
+    } finally {
+      setSolutionLoading(false);
     }
   };
 
@@ -258,6 +299,15 @@ export default function ProblemDetail() {
             loading={hintLoading}
             error={hintError}
             currentNextLevel={nextHintLevel}
+            hintHistory={hintHistory}
+            onRevealSolutionClick={handleRevealSolutionClick}
+            onConfirmReveal={handleConfirmRevealSolution}
+            onCancelReveal={handleCancelRevealSolution}
+            showConfirmation={showSolutionConfirmation}
+            solutionLoading={solutionLoading}
+            solutionData={solutionData}
+            solutionError={solutionError}
+            solutionValidation={solutionValidation}
           />
 
           <HintHistory hints={hintHistory} />

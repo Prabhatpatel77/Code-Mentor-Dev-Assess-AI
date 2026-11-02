@@ -123,6 +123,23 @@ class AIRequestHandler(BaseHTTPRequestHandler):
                 self._set_headers(200)
                 self.wfile.write(json.dumps(res).encode("utf-8"))
 
+            elif path == "/api/hints/solution":
+                from services.llm_service import llm_service
+                problem_title = payload.get("problemTitle", "")
+                problem_description = payload.get("problemDescription", "")
+                examples = payload.get("examples", [])
+                solution_data = llm_service.generate_complete_solution(
+                    problem_title=problem_title,
+                    problem_description=problem_description,
+                    examples=examples
+                )
+                res = {
+                    "success": True,
+                    "solution": solution_data
+                }
+                self._set_headers(200)
+                self.wfile.write(json.dumps(res).encode("utf-8"))
+
             elif path in ("/api/agent", "/api/supervisor/process"):
                 req_type = (payload.get("request_type") or "").strip().lower()
                 if req_type not in ("hint", "review", "coach"):

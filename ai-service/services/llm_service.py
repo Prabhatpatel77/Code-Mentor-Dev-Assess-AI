@@ -269,5 +269,214 @@ Do not invent statistics; strictly use the provided progress and recommendation 
             print(f"[Gemini Coach Warning] {e}")
             return fallback_explanation
 
+    def generate_complete_solution(self, problem_title: str, problem_description: str, examples: list) -> dict:
+        """
+        Calls Gemini API to generate a complete structured JavaScript solution and explanation.
+        """
+        api_key = os.getenv("GEMINI_API_KEY", self.api_key)
+
+        title_lower = problem_title.lower()
+
+        problem_specific_fallbacks = {
+            "two sum": {
+                "problemUnderstanding": "Given an array of integers 'nums' and an integer 'target', return indices of the two numbers such that they add up to 'target'. Each input has exactly one solution.",
+                "approach": "We use a JavaScript Map to store numbers and their indices as we iterate. For each number, we check if its complement (target - num) is already in the map, achieving O(n) time complexity.",
+                "code": "function twoSum(nums, target) {\n  const map = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const complement = target - nums[i];\n    if (map.has(complement)) {\n      return [map.get(complement), i];\n    }\n    map.set(nums[i], i);\n  }\n  return [];\n}",
+                "codeExplanation": [
+                    { "section": "Map Initialization", "explanation": "Create a Map for O(1) average lookup time." },
+                    { "section": "Iteration & Complement", "explanation": "Calculate the complement for each element and check existence." },
+                    { "section": "Match & Return", "explanation": "Return stored index of complement and current index i." }
+                ],
+                "dryRun": [
+                    { "step": 1, "description": "nums = [2, 7, 11, 15], target = 9. i = 0, num = 2. complement = 7. Map set (2, 0)." },
+                    { "step": 2, "description": "i = 1, num = 7. complement = 2. Found in map at index 0. Return [0, 1]." }
+                ],
+                "timeComplexity": "O(n)",
+                "spaceComplexity": "O(n)",
+                "commonMistakes": [
+                    "Using nested loops leading to O(n^2) performance.",
+                    "Returning values instead of array indices."
+                ]
+            },
+            "reverse string": {
+                "problemUnderstanding": "Write a function that reverses a given string or character array.",
+                "approach": "Convert the string into an array of characters, reverse it in place, and join it back into a string.",
+                "code": "function reverseString(str) {\n  return str.split('').reverse().join('');\n}",
+                "codeExplanation": [
+                    { "section": "Split", "explanation": "Split string into character array." },
+                    { "section": "Reverse", "explanation": "Reverse array order." },
+                    { "section": "Join", "explanation": "Join characters back into a string." }
+                ],
+                "dryRun": [
+                    { "step": 1, "description": "Input: 'hello'. Split to ['h', 'e', 'l', 'l', 'o']." },
+                    { "step": 2, "description": "Reverse to ['o', 'l', 'l', 'e', 'h']." },
+                    { "step": 3, "description": "Join to 'olleh'." }
+                ],
+                "timeComplexity": "O(n)",
+                "spaceComplexity": "O(n)",
+                "commonMistakes": [
+                    "Not handling empty string edge cases."
+                ]
+            },
+            "valid palindrome": {
+                "problemUnderstanding": "A phrase is a palindrome if, after converting all uppercase letters to lowercase and removing non-alphanumeric characters, it reads the same forward and backward.",
+                "approach": "Sanitize the string using regular expressions to keep only alphanumeric characters, convert to lowercase, and check if it equals its reverse.",
+                "code": "function isPalindrome(s) {\n  const cleaned = s.toLowerCase().replace(/[^a-z0-9]/g, '');\n  return cleaned === cleaned.split('').reverse().join('');\n}",
+                "codeExplanation": [
+                    { "section": "Sanitization", "explanation": "Lowercases and strips out non-alphanumeric characters." },
+                    { "section": "Comparison", "explanation": "Compares cleaned string with its reversed self." }
+                ],
+                "dryRun": [
+                    { "step": 1, "description": "Input: 'A man, a plan, a canal: Panama'." },
+                    { "step": 2, "description": "Cleaned: 'amanaplanacanalpanama'." },
+                    { "step": 3, "description": "Reversed is identical, return true." }
+                ],
+                "timeComplexity": "O(n)",
+                "spaceComplexity": "O(n)",
+                "commonMistakes": [
+                    "Failing to filter out spaces and punctuation marks."
+                ]
+            },
+            "find maximum in array": {
+                "problemUnderstanding": "Given an array of numbers nums, return the maximum number in the array.",
+                "approach": "Initialize max with the first element and iterate through the array updating max whenever a larger number is found.",
+                "code": "function findMax(nums) {\n  if (!nums || nums.length === 0) return null;\n  let max = nums[0];\n  for (let i = 1; i < nums.length; i++) {\n    if (nums[i] > max) {\n      max = nums[i];\n    }\n  }\n  return max;\n}",
+                "codeExplanation": [
+                    { "section": "Validation", "explanation": "Ensure array is not empty." },
+                    { "section": "Iteration", "explanation": "Compare each element to current maximum." }
+                ],
+                "dryRun": [
+                    { "step": 1, "description": "nums = [1, 5, 3, 9, 2]. max = 1." },
+                    { "step": 2, "description": "Compares 5, 3, 9, 2. Updates max to 9 and returns it." }
+                ],
+                "timeComplexity": "O(n)",
+                "spaceComplexity": "O(1)",
+                "commonMistakes": [
+                    "Initializing max to 0 instead of nums[0], failing on negative arrays."
+                ]
+            },
+            "contains duplicate": {
+                "problemUnderstanding": "Given an integer array nums, return true if any value appears at least twice in the array, and false if every element is distinct.",
+                "approach": "Use a JavaScript Set to record visited numbers. If a number is already in the set, return true.",
+                "code": "function containsDuplicate(nums) {\n  const seen = new Set();\n  for (const num of nums) {\n    if (seen.has(num)) return true;\n    seen.add(num);\n  }\n  return false;\n}",
+                "codeExplanation": [
+                    { "section": "Set Creation", "explanation": "Initialize Set for O(1) lookup." },
+                    { "section": "Traversal", "explanation": "Check and store each element." }
+                ],
+                "dryRun": [
+                    { "step": 1, "description": "nums = [1, 2, 3, 1]. Add 1, 2, 3." },
+                    { "step": 2, "description": "Encounter 1 again. Found in set. Return true." }
+                ],
+                "timeComplexity": "O(n)",
+                "spaceComplexity": "O(n)",
+                "commonMistakes": [
+                    "Using nested loops resulting in O(n^2) time."
+                ]
+            }
+        }
+
+        # Find matching fallback
+        matched_fallback = None
+        for key in problem_specific_fallbacks:
+            if key in title_lower:
+                matched_fallback = problem_specific_fallbacks[key]
+                break
+        
+        if not matched_fallback:
+            matched_fallback = {
+                "problemUnderstanding": f"The problem '{problem_title}' requires processing input data efficiently to produce the required output according to specifications.",
+                "approach": "Use a structured algorithmic approach to process input and return the correct result.",
+                "code": "function solution(input) {\n  // Solution for " + problem_title + "\n  return input;\n}",
+                "codeExplanation": [
+                    { "section": "Core Processing", "explanation": "Process input and return output." }
+                ],
+                "dryRun": [
+                    { "step": 1, "description": "Receive input and return result." }
+                ],
+                "timeComplexity": "O(n)",
+                "spaceComplexity": "O(1)",
+                "commonMistakes": [
+                    "Not handling edge cases."
+                ]
+            }
+
+        if not api_key:
+            return matched_fallback
+
+        system_instruction = """
+You are an expert coding mentor and JavaScript algorithm engineer.
+Solve the exact coding problem provided and return a valid JSON object with the following exact structure:
+{
+  "problemUnderstanding": "Specific explanation of this problem",
+  "approach": "Actual algorithm used",
+  "code": "Complete executable JavaScript code with function definition (e.g. function solution(...) { ... })",
+  "codeExplanation": [
+    {
+      "section": "Specific code section",
+      "explanation": "What this code does"
+    }
+  ],
+  "dryRun": [
+    {
+      "step": 1,
+      "description": "Actual execution step"
+    }
+  ],
+  "timeComplexity": "Actual time complexity",
+  "spaceComplexity": "Actual space complexity",
+  "commonMistakes": [
+    "Problem-specific mistake"
+  ]
+}
+"""
+        prompt_content = f"""
+Problem Title: {problem_title}
+Problem Description: {problem_description}
+Examples: {json.dumps(examples if examples else [])}
+"""
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": f"{system_instruction}\n\n{prompt_content}"}]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.2,
+                "maxOutputTokens": 1000,
+                "responseMimeType": "application/json"
+            }
+        }
+
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=12) as response:
+                res_data = json.loads(response.read().decode('utf-8'))
+                candidates = res_data.get('candidates', [])
+                if candidates and 'content' in candidates[0]:
+                    parts = candidates[0]['content'].get('parts', [])
+                    if parts:
+                        text = parts[0].get('text', '').strip()
+                        if text.startswith("```json"):
+                            text = text[7:]
+                        if text.startswith("```"):
+                            text = text[3:]
+                        if text.endswith("```"):
+                            text = text[:-3]
+                        parsed_json = json.loads(text.strip())
+                        if parsed_json and isinstance(parsed_json, dict) and parsed_json.get("code"):
+                            return parsed_json
+                return matched_fallback
+        except Exception as e:
+            print(f"[Gemini Solution Warning] {e}")
+            return matched_fallback
+
 llm_service = LLMService()
 

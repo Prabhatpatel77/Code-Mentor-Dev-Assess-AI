@@ -1,25 +1,28 @@
 /* src/pages/Home/Home.css */
+/* src/pages/Home/Home.css */
 .home-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: clamp(1rem, 2vh, 2rem) 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: clamp(1rem, 2vh, 2rem);
+  height: calc(100vh - 60px); /* Adjust based on actual navbar height */
+  justify-content: center;
 }
 
 .hero-section {
   text-align: center;
-  padding: 2rem 0;
+  padding: clamp(0.5rem, 1vh, 1rem) 0;
   max-width: 800px;
   margin: 0 auto;
 }
 
 .hero-title {
-  font-size: 2.75rem;
+  font-size: clamp(2rem, 4vw, 2.75rem);
   font-weight: 800;
-  line-height: 1.2;
-  margin-bottom: 1rem;
+  line-height: 1.1;
+  margin-bottom: 0.75rem;
 }
 
 .hero-gradient-text {
@@ -30,14 +33,28 @@
 
 .hero-description {
   color: var(--text-muted);
-  font-size: 1.1rem;
+  font-size: clamp(0.9rem, 1vw, 1.1rem);
   max-width: 650px;
-  margin: 0 auto 1.5rem auto;
+  margin: 0 auto 1.25rem auto;
 }
 
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  gap: 0.75rem;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
 }
+
+.card {
+  background: var(--bg-card);
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+}
+

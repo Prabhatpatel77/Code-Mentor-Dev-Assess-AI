@@ -4,7 +4,7 @@ import submissionRoutes from './submissionRoutes.js';
 import aiRoutes from './aiRoutes.js';
 import healthRoutes from './healthRoutes.js';
 import coachRoutes from './coachRoutes.js';
-import { requestHint, requestReview } from '../controllers/aiController.js';
+import { requestHint, requestReview, requestCompleteSolution } from '../controllers/aiController.js';
 import { handleAgentRequest } from '../controllers/agentController.js';
 
 const router = express.Router();
@@ -15,6 +15,9 @@ router.use('/submissions', submissionRoutes);
 router.use('/ai', aiRoutes);
 router.use('/coach', coachRoutes);
 router.post('/hints', requestHint);
+router.post('/hints/solution', requestCompleteSolution);
+router.post('/hint/solution', requestCompleteSolution);
+router.post('/solution', requestCompleteSolution);
 router.post('/reviews', requestReview);
 router.post('/agent', handleAgentRequest);
 

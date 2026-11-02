@@ -92,9 +92,9 @@ export const SEED_PROBLEMS = [
       }
     ],
     testCases: [
-      { input: '[[1, 5, 3, 9, 2]]', expectedOutput: '9', isHidden: false },
-      { input: '[[-10, -5, -20]]', expectedOutput: '-5', isHidden: false },
-      { input: '[[100]]', expectedOutput: '100', isHidden: true }
+      { input: '[1, 5, 3, 9, 2]', expectedOutput: '9', isHidden: false },
+      { input: '[-10, -5, -20]', expectedOutput: '-5', isHidden: false },
+      { input: '[100]', expectedOutput: '100', isHidden: true }
     ]
   },
   {
@@ -119,9 +119,9 @@ export const SEED_PROBLEMS = [
       }
     ],
     testCases: [
-      { input: '[[1, 2, 3, 1]]', expectedOutput: 'true', isHidden: false },
-      { input: '[[1, 2, 3, 4]]', expectedOutput: 'false', isHidden: false },
-      { input: '[[1, 1, 1, 3, 3, 4, 3, 2, 4, 2]]', expectedOutput: 'true', isHidden: true }
+      { input: '[1, 2, 3, 1]', expectedOutput: 'true', isHidden: false },
+      { input: '[1, 2, 3, 4]', expectedOutput: 'false', isHidden: false },
+      { input: '[1, 1, 1, 3, 3, 4, 3, 2, 4, 2]', expectedOutput: 'true', isHidden: true }
     ]
   }
 ];
