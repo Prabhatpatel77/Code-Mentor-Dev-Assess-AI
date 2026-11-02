@@ -9,7 +9,7 @@ import {
  */
 export const getProgress = async (req, res, next) => {
   try {
-    const userId = req.query.userId || 'guest_user';
+    const userId = req.user ? String(req.user.userId || req.user.id) : (req.query.userId || 'guest_user');
     const progress = await calculateProgress(userId);
 
     res.status(200).json({
@@ -26,7 +26,7 @@ export const getProgress = async (req, res, next) => {
  */
 export const getTopics = async (req, res, next) => {
   try {
-    const userId = req.query.userId || 'guest_user';
+    const userId = req.user ? String(req.user.userId || req.user.id) : (req.query.userId || 'guest_user');
     const topics = await calculateTopicPerformance(userId);
 
     res.status(200).json({
@@ -43,7 +43,7 @@ export const getTopics = async (req, res, next) => {
  */
 export const getRecommendation = async (req, res, next) => {
   try {
-    const userId = req.query.userId || 'guest_user';
+    const userId = req.user ? String(req.user.userId || req.user.id) : (req.query.userId || 'guest_user');
     const recommendation = await calculateRecommendation(userId);
 
     res.status(200).json({

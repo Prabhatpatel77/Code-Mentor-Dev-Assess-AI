@@ -6,6 +6,9 @@ import Problems from './pages/Problems/Problems';
 import ProblemDetail from './pages/ProblemDetail/ProblemDetail';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Status from './pages/Status/Status';
+import Login from './pages/Login/Login';
+import Register from './pages/Register/Register';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -21,10 +24,12 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/problems" element={<Problems />} />
-                <Route path="/problems/:id" element={<ProblemDetail />} />
-                <Route path="/progress" element={<Dashboard />} />
-                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/problems/:id" element={<ProtectedRoute><ProblemDetail /></ProtectedRoute>} />
+                <Route path="/progress" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/status" element={<Status />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
               </Routes>
             </main>
           </div>
@@ -33,4 +38,3 @@ export default function App() {
     </Router>
   );
 }
-

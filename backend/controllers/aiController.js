@@ -29,7 +29,8 @@ export const getMemoryHintUsages = () => memoryHintUsages;
  */
 export const requestHint = async (req, res, next) => {
   try {
-    const { problemId, code = '', userId = 'guest_user', testResults = [] } = req.body;
+    const { problemId, code = '', testResults = [] } = req.body;
+    const userId = req.user ? String(req.user.userId || req.user.id) : (req.body.userId || 'guest_user');
 
     if (!problemId) {
       return res.status(400).json({
@@ -157,7 +158,8 @@ export const requestHint = async (req, res, next) => {
  */
 export const requestReview = async (req, res, next) => {
   try {
-    const { problemId, code = '', userId = 'guest_user' } = req.body;
+    const { problemId, code = '' } = req.body;
+    const userId = req.user ? String(req.user.userId || req.user.id) : (req.body.userId || 'guest_user');
 
     if (!problemId) {
       return res.status(400).json({
@@ -270,7 +272,7 @@ export const requestReview = async (req, res, next) => {
 
 export const requestCoaching = async (req, res, next) => {
   try {
-    const { userId = 'guest_user' } = req.body;
+    const userId = req.user ? String(req.user.userId || req.user.id) : (req.body.userId || 'guest_user');
     const recommendation = await calculateRecommendation(userId);
     res.status(200).json({
       success: true,
@@ -284,7 +286,8 @@ export const requestCoaching = async (req, res, next) => {
 
 export const requestCompleteSolution = async (req, res, next) => {
   try {
-    const { problemId, userId = 'guest_user' } = req.body;
+    const { problemId } = req.body;
+    const userId = req.user ? String(req.user.userId || req.user.id) : (req.body.userId || 'guest_user');
 
     if (!problemId) {
       return res.status(400).json({

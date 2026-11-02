@@ -10,10 +10,12 @@ import HintSection from '../../components/HintSection/HintSection';
 import HintHistory from '../../components/HintHistory/HintHistory';
 import CodeReview from '../../components/CodeReview/CodeReview';
 import { ArrowLeft, Play, Send, Tag, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './ProblemDetail.css';
 
 export default function ProblemDetail() {
   const { id } = useParams();
+  const { requireAuth, user } = useAuth();
   const [problem, setProblem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -79,118 +81,130 @@ export default function ProblemDetail() {
     load();
   }, [id]);
 
-  const handleRunCode = async () => {
-    if (!code.trim()) return;
-    setExecuting(true);
-    setExecutionError(null);
-    setTestResult(null);
+  const handleRunCode = () => {
+    requireAuth(async () => {
+      if (!code.trim()) return;
+      setExecuting(true);
+      setExecutionError(null);
+      setTestResult(null);
 
-    try {
-      const res = await runCode(problem._id, code);
-      setTestResult(res);
-    } catch (err) {
-      console.error('Run code error:', err);
-      setExecutionError(err.response?.data?.message || 'Unable to execute the code. Please try again.');
-    } finally {
-      setExecuting(false);
-    }
-  };
-
-  const handleSubmitSolution = async () => {
-    if (!code.trim()) return;
-    setExecuting(true);
-    setExecutionError(null);
-    setTestResult(null);
-
-    try {
-      const res = await submitSolution(problem._id, code);
-      setTestResult(res);
-    } catch (err) {
-      console.error('Submit solution error:', err);
-      setExecutionError(err.response?.data?.message || 'Unable to submit the solution. Please try again.');
-    } finally {
-      setExecuting(false);
-    }
-  };
-
-  const handleRequestHint = async () => {
-    setHintLoading(true);
-    setHintError(null);
-
-    try {
-      const activeTestResults = testResult ? testResult.results : [];
-      const res = await getAdaptiveHint(problem._id, code, activeTestResults);
-
-      if (res && res.success) {
-        const receivedLevel = res.hintLevel || nextHintLevel;
-        const newHintObj = {
-          level: receivedLevel,
-          hint: res.hint
-        };
-
-        setHintHistory((prev) => [...prev, newHintObj]);
-        setNextHintLevel(Math.min(receivedLevel + 1, 4));
-      } else {
-        setHintError('Could not retrieve hint. Please try again.');
+      try {
+        const res = await runCode(problem._id, code);
+        setTestResult(res);
+      } catch (err) {
+        console.error('Run code error:', err);
+        setExecutionError(err.response?.data?.message || 'Unable to execute the code. Please try again.');
+      } finally {
+        setExecuting(false);
       }
-    } catch (err) {
-      console.error('Adaptive Hint error:', err);
-      setHintError(err.response?.data?.message || 'Failed to request AI hint. Please check your connection.');
-    } finally {
-      setHintLoading(false);
-    }
+    }, `/problems/${id}`, 'You must be logged in to execute code.');
+  };
+
+  const handleSubmitSolution = () => {
+    requireAuth(async () => {
+      if (!code.trim()) return;
+      setExecuting(true);
+      setExecutionError(null);
+      setTestResult(null);
+
+      try {
+        const res = await submitSolution(problem._id, code);
+        setTestResult(res);
+      } catch (err) {
+        console.error('Submit solution error:', err);
+        setExecutionError(err.response?.data?.message || 'Unable to submit the solution. Please try again.');
+      } finally {
+        setExecuting(false);
+      }
+    }, `/problems/${id}`, 'You must be logged in to submit a solution.');
+  };
+
+  const handleRequestHint = () => {
+    requireAuth(async () => {
+      setHintLoading(true);
+      setHintError(null);
+
+      try {
+        const activeTestResults = testResult ? testResult.results : [];
+        const res = await getAdaptiveHint(problem._id, code, activeTestResults);
+
+        if (res && res.success) {
+          const receivedLevel = res.hintLevel || nextHintLevel;
+          const newHintObj = {
+            level: receivedLevel,
+            hint: res.hint
+          };
+
+          setHintHistory((prev) => [...prev, newHintObj]);
+          setNextHintLevel(Math.min(receivedLevel + 1, 4));
+        } else {
+          setHintError('Could not retrieve hint. Please try again.');
+        }
+      } catch (err) {
+        console.error('Adaptive Hint error:', err);
+        setHintError(err.response?.data?.message || 'Failed to request AI hint. Please check your connection.');
+      } finally {
+        setHintLoading(false);
+      }
+    }, `/problems/${id}`, 'You must be logged in to request adaptive hints.');
   };
 
   const handleRevealSolutionClick = () => {
-    setShowSolutionConfirmation(true);
+    requireAuth(() => {
+      setShowSolutionConfirmation(true);
+    }, `/problems/${id}`, 'You must be logged in to reveal the complete solution.');
   };
 
   const handleCancelRevealSolution = () => {
     setShowSolutionConfirmation(false);
   };
 
-  const handleConfirmRevealSolution = async () => {
-    setShowSolutionConfirmation(false);
-    setSolutionLoading(true);
-    setSolutionError(null);
+  const handleConfirmRevealSolution = () => {
+    requireAuth(async () => {
+      setShowSolutionConfirmation(false);
+      setSolutionLoading(true);
+      setSolutionError(null);
 
-    try {
-      const res = await getCompleteSolution(problem._id, 'guest_user');
-      if (res && res.success) {
-        setSolutionData(res.solution);
-        setSolutionValidation(res.validation);
-      } else {
-        setSolutionError(res.message || 'Failed to retrieve complete solution.');
+      try {
+        const res = await getCompleteSolution(problem._id, user?.id || 'guest_user');
+        if (res && res.success) {
+          setSolutionData(res.solution);
+          setSolutionValidation(res.validation);
+        } else {
+          setSolutionError(res.message || 'Failed to retrieve complete solution.');
+        }
+      } catch (err) {
+        console.error('Complete solution error:', err);
+        setSolutionError(err.response?.data?.message || 'Failed to retrieve complete solution. Ensure you have reached Hint Level 4.');
+      } finally {
+        setSolutionLoading(false);
       }
-    } catch (err) {
-      console.error('Complete solution error:', err);
-      setSolutionError(err.response?.data?.message || 'Failed to retrieve complete solution. Ensure you have reached Hint Level 4.');
-    } finally {
-      setSolutionLoading(false);
-    }
+    }, `/problems/${id}`, 'You must be logged in to reveal the complete solution.');
   };
 
-  const handleRequestReview = async () => {
-    if (!code.trim()) {
-      setReviewError('Please write some code before requesting a review.');
-      return;
-    }
-    setReviewLoading(true);
-    setReviewError(null);
-
-    try {
-      const res = await getCodeReview(problem._id, code);
-      if (res && res.success) {
-        setCodeReview(res.review);
-      } else {
-        setReviewError('Unable to generate code review.');
+  const handleRequestReview = () => {
+    requireAuth(async () => {
+      if (!code.trim()) {
+        setReviewError('Please write some code before requesting a review.');
+        return;
       }
-    } catch (err) {
-      console.error('Code review error:', err);
-      setReviewError(err.response?.data?.message || 'Unable to generate the code review right now. Please try again.');
-    } finally {
-      setReviewLoading(false);
-    }
+      setReviewLoading(true);
+      setReviewError(null);
+
+      try {
+        const res = await getCodeReview(problem._id, code);
+        if (res && res.success) {
+          setCodeReview(res.review);
+        } else {
+          setReviewError('Unable to generate code review.');
+        }
+      } catch (err) {
+        console.error('Code review error:', err);
+        setReviewError(err.response?.data?.message || 'Unable to generate the code review right now. Please try again.');
+      } finally {
+        setReviewLoading(false);
+      }
+    }, `/problems/${id}`, 'You must be logged in to request an AI code review.');
   };
 
   if (loading) {

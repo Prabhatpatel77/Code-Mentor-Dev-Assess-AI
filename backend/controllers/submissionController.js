@@ -119,9 +119,11 @@ export const submitSolution = async (req, res, next) => {
     // Execute against all test cases for official submission
     const executionResult = executeJavaScript(code, problem.testCases || []);
 
+    const effectiveUserId = req.user ? String(req.user.userId || req.user.id) : (req.body.userId || 'guest_user');
+
     // Create Submission record in DB or memory fallback
     const submissionData = {
-      userId,
+      userId: effectiveUserId,
       problemId,
       code,
       status: executionResult.status,

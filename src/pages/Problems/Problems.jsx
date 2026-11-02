@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getProblems } from '../../services/problemService';
 import { BookOpen, Code2, Tag, ChevronRight, Search, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './Problems.css';
 
 export default function Problems() {
@@ -11,6 +12,9 @@ export default function Problems() {
   const [selectedTopic, setSelectedTopic] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const { requireAuth } = useAuth();
+  const navigate = useNavigate();
 
   const loadProblems = async () => {
     setLoading(true);
@@ -40,6 +44,15 @@ export default function Problems() {
     return p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
            p.description.toLowerCase().includes(searchQuery.toLowerCase());
   });
+
+  const handleViewDetails = (problemId) => {
+    const targetPath = `/problems/${problemId}`;
+    requireAuth(
+      () => navigate(targetPath),
+      targetPath,
+      'You are not registered or logged in. Please log in or create an account to view problem details and access the coding workspace.'
+    );
+  };
 
   return (
     <div className="problems-container">
@@ -143,6 +156,8 @@ export default function Problems() {
               <div
                 key={problem._id}
                 className="card problem-item-card"
+                onClick={() => handleViewDetails(problem._id)}
+                style={{ cursor: 'pointer' }}
               >
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <div className="flex items-center gap-2">
@@ -167,15 +182,18 @@ export default function Problems() {
                 </div>
 
                 <div>
-                  <Link
-                    to={`/problems/${problem._id}`}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewDetails(problem._id);
+                    }}
                     className="btn-primary"
                     style={{ backgroundColor: 'rgba(99, 102, 241, 0.2)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.3)' }}
                   >
                     <Code2 size={16} />
                     <span>View Details</span>
                     <ChevronRight size={16} />
-                  </Link>
+                  </button>
                 </div>
               </div>
             );
