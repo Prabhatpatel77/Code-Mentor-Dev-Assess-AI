@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import AuthModal from '../components/AuthModal/AuthModal';
 
@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
-      const res = await axios.get('/api/auth/me');
+      const res = await axios.get('/api/auth/me', { withCredentials: true });
       if (res.data && res.data.user) {
         setUser(res.data.user);
       } else {
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (credentials) => {
-    const res = await axios.post('/api/auth/login', credentials);
+    const res = await axios.post('/api/auth/login', credentials, { withCredentials: true });
     if (res.data && res.data.user) {
       setUser(res.data.user);
     }
@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (userData) => {
-    const res = await axios.post('/api/auth/register', userData);
+    const res = await axios.post('/api/auth/register', userData, { withCredentials: true });
     if (res.data && res.data.user) {
       setUser(res.data.user);
     }
@@ -53,25 +53,34 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await axios.post('/api/auth/logout');
+      await axios.post('/api/auth/logout', {}, { withCredentials: true });
     } catch (e) {}
     setUser(null);
   };
 
-  const openAuthModal = ({ title, message, redirectPath } = {}) => {
-    setAuthModalState({
-      isOpen: true,
-      title: title || 'Login Required',
-      message: message || 'You are not registered or logged in. Please log in or create an account to access this feature.',
-      redirectPath: redirectPath || window.location.pathname
+  const openAuthModal = useCallback(({ title, message, redirectPath } = {}) => {
+    const newTitle = title || 'Login Required';
+    const newMessage = message || 'You are not registered or logged in. Please log in or create an account to access this feature.';
+    const newPath = redirectPath || window.location.pathname;
+
+    setAuthModalState(prev => {
+      if (prev.isOpen && prev.title === newTitle && prev.message === newMessage && prev.redirectPath === newPath) {
+        return prev;
+      }
+      return {
+        isOpen: true,
+        title: newTitle,
+        message: newMessage,
+        redirectPath: newPath
+      };
     });
-  };
+  }, []);
 
-  const closeAuthModal = () => {
+  const closeAuthModal = useCallback(() => {
     setAuthModalState(prev => ({ ...prev, isOpen: false }));
-  };
+  }, []);
 
-  const requireAuth = (action, redirectPath, customMessage) => {
+  const requireAuth = useCallback((action, redirectPath, customMessage) => {
     if (user) {
       if (typeof action === 'function') action();
       return true;
@@ -82,7 +91,7 @@ export const AuthProvider = ({ children }) => {
       });
       return false;
     }
-  };
+  }, [user, openAuthModal]);
 
   return (
     <AuthContext.Provider value={{

@@ -27,7 +27,7 @@ export default function Problems() {
       setProblems(response.data || []);
     } catch (err) {
       console.error('Failed to load problems:', err);
-      setError(err.message || 'Failed to connect to Express server.');
+      setError(err.message || 'Unable to load problems right now. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ export default function Problems() {
             <span>Coding Problems Catalog</span>
           </h1>
           <p className="text-muted text-sm mt-1">
-            Browse coding challenges stored in MongoDB database with difficulty and topic filters.
+            Browse coding challenges with difficulty and topic filters.
           </p>
         </div>
 
@@ -132,15 +132,15 @@ export default function Problems() {
         <div className="card" style={{ borderColor: 'var(--accent-rose)', backgroundColor: 'rgba(244, 63, 94, 0.1)', color: '#fda4af', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <AlertCircle size={20} />
           <div>
-            <strong>Error loading problems:</strong> {error}
+            <strong>Unable to load problems:</strong> {error}
           </div>
         </div>
       )}
 
       {/* Loading state */}
       {loading ? (
-        <div className="card" style={{ textAlign: 'center', padding: '3.5rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
-          Loading problem set from MongoDB...
+        <div className="card" style={{ textAlign: 'center', padding: '3.5rem', fontFamily: 'sans-serif', color: 'var(--text-muted)' }}>
+          Loading problems...
         </div>
       ) : filteredProblems.length === 0 ? (
         /* Empty state */

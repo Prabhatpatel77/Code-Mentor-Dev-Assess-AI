@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Code2, BookOpen, Activity, Sparkles, Terminal, Menu, X, Sun, Moon, LogIn, LogOut, User } from 'lucide-react';
+import { Code2, BookOpen, Activity, Sparkles, Terminal, Menu, X, Sun, Moon, LogIn, LogOut, User, Users, Shield, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import './Navbar.css';
@@ -15,12 +15,23 @@ export default function Navbar() {
     setIsMenuOpen(false);
   }, [location]);
 
-  const navItems = [
-    { path: '/', label: 'Home', icon: Code2, public: true },
-    { path: '/problems', label: 'Problems', icon: BookOpen, public: true },
-    { path: '/progress', label: 'Learning Coach', icon: Sparkles, protected: true },
-    { path: '/status', label: 'System Health', icon: Activity, public: true }
+  const isAdmin = user && user.role === 'admin';
+
+  const studentNavItems = [
+    { path: '/', label: 'Home', icon: Code2 },
+    { path: '/problems', label: 'Problems', icon: BookOpen },
+    { path: '/progress', label: 'Learning Coach', icon: Sparkles, protected: true }
   ];
+
+  const adminNavItems = [
+    { path: '/', label: 'Home', icon: Code2 },
+    { path: '/problems', label: 'Problems', icon: BookOpen },
+    { path: '/admin', label: 'Admin Overview', icon: LayoutDashboard },
+    { path: '/admin/students', label: 'Student Management', icon: Users },
+    { path: '/admin/system', label: 'System Health', icon: Activity }
+  ];
+
+  const navItems = isAdmin ? adminNavItems : studentNavItems;
 
   const handleNavClick = (e, item) => {
     if (item.protected && !user) {
@@ -38,7 +49,7 @@ export default function Navbar() {
           </div>
           <div>
             <span className="brand-title">CodeMentorAI</span>
-            <span className="brand-subtitle">ASSESSMENT PLATFORM</span>
+            <span className="brand-subtitle">{isAdmin ? 'ADMIN PANEL' : 'ASSESSMENT PLATFORM'}</span>
           </div>
         </Link>
 
@@ -85,9 +96,9 @@ export default function Navbar() {
           <div className="navbar-auth-section">
             {user ? (
               <div className="navbar-user-menu">
-                <span className="user-badge" title={user.email}>
-                  <User size={14} />
-                  <span>{user.name || user.email}</span>
+                <span className={`user-badge ${isAdmin ? 'admin-badge' : ''}`} title={user.email}>
+                  {isAdmin ? <Shield size={14} /> : <User size={14} />}
+                  <span>{user.name || user.email} {isAdmin ? '(Admin)' : ''}</span>
                 </span>
                 <button onClick={logout} className="btn-logout" title="Log Out">
                   <LogOut size={16} />

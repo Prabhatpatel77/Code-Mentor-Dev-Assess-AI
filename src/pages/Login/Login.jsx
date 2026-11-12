@@ -27,8 +27,12 @@ export default function Login() {
     setError('');
 
     try {
-      await login({ email, password });
-      navigate(from, { replace: true });
+      const resData = await login({ email, password });
+      if (resData && resData.user && resData.user.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to log in. Please check your credentials.');
     } finally {
@@ -96,6 +100,12 @@ export default function Login() {
             Don't have an account?{' '}
             <Link to="/register" state={{ from }}>
               Create an Account
+            </Link>
+          </p>
+          <p style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
+            Are you an administrator?{' '}
+            <Link to="/admin/login" style={{ color: 'var(--accent-indigo)' }}>
+              Admin Login
             </Link>
           </p>
         </div>

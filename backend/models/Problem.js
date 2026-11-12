@@ -47,4 +47,8 @@ const problemSchema = new Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// Database Performance Indexes
+problemSchema.index({ difficulty: 1, topic: 1 });
+problemSchema.index({ createdAt: -1 });
+
 export const Problem = mongoose.models.Problem || mongoose.model('Problem', problemSchema);

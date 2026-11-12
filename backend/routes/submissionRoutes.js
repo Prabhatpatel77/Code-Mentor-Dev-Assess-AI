@@ -1,10 +1,10 @@
 import express from 'express';
 import { runCode, submitSolution } from '../controllers/submissionController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { optionalProtect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.use(protect);
+router.use(optionalProtect);
 
 router.post('/run', runCode);
 router.post('/', submitSolution);

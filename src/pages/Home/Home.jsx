@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import HealthStatusCard from '../../components/HealthStatusCard/HealthStatusCard';
-import { Code2, Sparkles, ShieldCheck, Terminal, ArrowRight, Lightbulb, BarChart3 } from 'lucide-react';
+import { Code2, Sparkles, ShieldCheck, ArrowRight, Lightbulb, BarChart3, TrendingUp } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './Home.css';
 
 export default function Home() {
+  const { user } = useAuth();
+
   return (
     <div className="home-container">
       {/* Hero Section */}
@@ -31,9 +33,9 @@ export default function Home() {
             <span>Explore Coding Problems</span>
             <ArrowRight size={16} />
           </Link>
-          <Link to="/status" className="btn-secondary">
-            <Terminal size={18} />
-            <span>System Architecture Status</span>
+          <Link to="/progress" className="btn-secondary">
+            <TrendingUp size={18} />
+            <span>View Learning Progress</span>
           </Link>
         </div>
       </div>
@@ -70,9 +72,6 @@ export default function Home() {
           </p>
         </div>
       </div>
-
-      {/* System Health Overview */}
-      <HealthStatusCard />
     </div>
   );
 }

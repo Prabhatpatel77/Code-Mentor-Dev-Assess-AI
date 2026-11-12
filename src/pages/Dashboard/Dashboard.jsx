@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { getCoachProgress, getCoachTopics, getCoachRecommendation } from '../../services/coachService';
 import ProgressSummary from '../../components/ProgressSummary/ProgressSummary';
 import TopicPerformance from '../../components/TopicPerformance/TopicPerformance';
@@ -8,6 +9,7 @@ import { Sparkles, RefreshCw, AlertCircle, Code2, ArrowRight } from 'lucide-reac
 import './Dashboard.css';
 
 export default function Dashboard() {
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(null);
@@ -15,6 +17,7 @@ export default function Dashboard() {
   const [recommendation, setRecommendation] = useState(null);
 
   const loadDashboardData = async () => {
+    if (!user) return;
     setLoading(true);
     setError(null);
     try {
@@ -34,16 +37,52 @@ export default function Dashboard() {
         setRecommendation(recRes.recommendation);
       }
     } catch (err) {
-      console.error('Failed to load dashboard data:', err);
-      setError('Unable to load your learning progress. Please try again.');
+      console.warn('Dashboard data fetch notification:', err?.response?.status || err.message);
+      if (err?.response?.status === 401) {
+        setError('Please log in to view your learning progress.');
+      } else {
+        setError('Unable to load your learning progress. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (!authLoading) {
+      if (user) {
+        loadDashboardData();
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [user, authLoading]);
+
+  if (authLoading) {
+    return (
+      <div className="dashboard-container" style={{ textAlign: 'center', padding: '5rem', color: 'var(--text-muted)' }}>
+        Verifying session...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="dashboard-container" style={{ textAlign: 'center', padding: '4rem 1.5rem', color: 'var(--text-muted)' }}>
+        <div className="card" style={{ maxWidth: '480px', margin: '0 auto', padding: '2rem' }}>
+          <AlertCircle size={36} style={{ color: 'var(--accent-indigo)', margin: '0 auto 1rem auto' }} />
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.5rem' }}>Login Required</h2>
+          <p style={{ fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+            Please log in or create a student account to view your learning progress dashboard.
+          </p>
+          <Link to="/login" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>Log In</span>
+            <ArrowRight size={16} />
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-container">

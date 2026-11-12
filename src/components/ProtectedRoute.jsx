@@ -11,7 +11,7 @@ export default function ProtectedRoute({ children }) {
         redirectPath: window.location.pathname
       });
     }
-  }, [user, loading, openAuthModal]);
+  }, [user, loading]);
 
   if (loading) {
     return (

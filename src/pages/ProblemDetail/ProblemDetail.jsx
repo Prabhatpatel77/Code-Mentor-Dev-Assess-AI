@@ -209,8 +209,8 @@ export default function ProblemDetail() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '5rem', fontFamily: 'monospace' }}>
-        Loading problem details from database...
+      <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--text-muted)' }}>
+        Loading problem...
       </div>
     );
   }

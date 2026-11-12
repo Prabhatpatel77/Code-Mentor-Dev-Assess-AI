@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Problem } from '../models/Problem.js';
 import { SEED_PROBLEMS } from '../seed/seedProblems.js';
 
@@ -12,43 +13,62 @@ const sanitizeProblemForLearner = (problemDoc) => {
 
 /**
  * GET /api/problems
- * Query params: ?difficulty=Easy&topic=Arrays
+ * Query params: ?difficulty=Easy&topic=Arrays&search=two
+ * Optimized for rapid response & minimal network payload size.
  */
 export const getProblems = async (req, res, next) => {
+  const startTime = Date.now();
   try {
-    const { difficulty, topic } = req.query;
+    const { difficulty, topic, search } = req.query;
     const filter = {};
 
-    if (difficulty) {
+    if (difficulty && difficulty !== 'All') {
       filter.difficulty = difficulty;
     }
-    if (topic) {
+    if (topic && topic !== 'All') {
       filter.topic = topic;
+    }
+    if (search && typeof search === 'string' && search.trim()) {
+      filter.title = { $regex: search.trim(), $options: 'i' };
     }
 
     let problems = [];
-    try {
-      problems = await Problem.find(filter).sort({ createdAt: -1 });
-    } catch (e) {
-      console.warn(`[DB Fetch Fallback] Using memory fallback: ${e.message}`);
+    if (mongoose.connection.readyState === 1) {
+      try {
+        // Fast lean query excluding heavy testCases and solution fields
+        problems = await Problem.find(filter)
+          .select('_id title description difficulty topic createdAt')
+          .lean()
+          .sort({ createdAt: -1 });
+      } catch (e) {
+        console.warn(`[DB Fetch Fallback] Using memory fallback: ${e.message}`);
+      }
     }
 
     // Memory fallback if DB has no records or is unreachable
     if (!problems || problems.length === 0) {
       problems = SEED_PROBLEMS.filter(p => {
-        const matchesDiff = !difficulty || p.difficulty.toLowerCase() === difficulty.toLowerCase();
-        const matchesTopic = !topic || p.topic.toLowerCase() === topic.toLowerCase();
-        return matchesDiff && matchesTopic;
-      }).map((p, idx) => ({ _id: `seed_${idx + 1}`, ...p }));
+        const matchesDiff = !difficulty || difficulty === 'All' || p.difficulty.toLowerCase() === difficulty.toLowerCase();
+        const matchesTopic = !topic || topic === 'All' || p.topic.toLowerCase() === topic.toLowerCase();
+        const matchesSearch = !search || p.title.toLowerCase().includes(search.toLowerCase());
+        return matchesDiff && matchesTopic && matchesSearch;
+      }).map((p, idx) => ({ 
+        _id: `seed_${idx + 1}`,
+        title: p.title,
+        description: p.description,
+        difficulty: p.difficulty,
+        topic: p.topic,
+        createdAt: p.createdAt || new Date()
+      }));
     }
 
-    // Sanitize test cases for learner safety
-    const sanitizedProblems = problems.map(p => sanitizeProblemForLearner(p));
+    const durationMs = Date.now() - startTime;
 
     res.status(200).json({
       success: true,
-      count: sanitizedProblems.length,
-      data: sanitizedProblems
+      count: problems.length,
+      durationMs,
+      data: problems
     });
   } catch (error) {
     next(error);
@@ -64,7 +84,7 @@ export const getProblemById = async (req, res, next) => {
     let problem = null;
 
     try {
-      problem = await Problem.findById(id);
+      problem = await Problem.findById(id).lean();
     } catch (e) {
       // Non-ObjectId string or invalid format
     }
@@ -106,34 +126,21 @@ export const createProblem = async (req, res, next) => {
   try {
     const { title, description, difficulty, topic, examples = [], testCases = [], starterCode } = req.body;
 
-    // Validation
     if (!title || typeof title !== 'string' || !title.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Title is required'
-      });
+      return res.status(400).json({ success: false, message: 'Title is required' });
     }
 
     if (!description || typeof description !== 'string' || !description.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Description is required'
-      });
+      return res.status(400).json({ success: false, message: 'Description is required' });
     }
 
     const validDifficulties = ['Easy', 'Medium', 'Hard'];
     if (!difficulty || !validDifficulties.includes(difficulty)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Difficulty must be one of: Easy, Medium, Hard'
-      });
+      return res.status(400).json({ success: false, message: 'Difficulty must be one of: Easy, Medium, Hard' });
     }
 
     if (!topic || typeof topic !== 'string' || !topic.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Topic is required'
-      });
+      return res.status(400).json({ success: false, message: 'Topic is required' });
     }
 
     let newProblem = null;
@@ -148,7 +155,6 @@ export const createProblem = async (req, res, next) => {
         starterCode
       });
     } catch (dbErr) {
-      // Memory fallback if DB is disconnected
       newProblem = {
         _id: `mem_${Date.now()}`,
         title: title.trim(),
@@ -188,7 +194,6 @@ export const deleteProblem = async (req, res, next) => {
     }
 
     if (!deleted) {
-      // Try memory fallback deletion
       const index = SEED_PROBLEMS.findIndex((p, idx) => `seed_${idx + 1}` === id || p._id === id);
       if (index !== -1) {
         deleted = SEED_PROBLEMS.splice(index, 1)[0];
